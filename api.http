@@ -1,0 +1,9 @@
+POST http://localhost:1234/users
+Content-Type: application/json
+
+{
+  "name": "xjf_255",
+  "password": "pruebasUni4@",
+  "email":"admin@gmail.gt",
+  "sql": "drop * table"
+}
