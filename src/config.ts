@@ -3,7 +3,9 @@ dotenv.config()
 
 const {
   DATABASE_URL: supabaseUrl = '',
-  DB_API_KEY: supabaseKey = ''
+  DB_API_KEY: supabaseKey = '',
+  SALT_ROUND = 10,
+  SECRET_KEY
 } = process.env
 
-export default { supabaseUrl, supabaseKey } 
+export { supabaseUrl, supabaseKey, SALT_ROUND, SECRET_KEY } 

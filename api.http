@@ -2,8 +2,30 @@ POST http://localhost:1234/users
 Content-Type: application/json
 
 {
-  "name": "xjf_255",
+  "user": "fedev",
   "password": "pruebasUni4@",
-  "email":"admin@gmail.gt",
+  "email":"administrador@gmail.gt",
   "sql": "drop * table"
+}
+
+### get users
+
+GET http://localhost:1234/users
+
+### change password
+
+PUT http://localhost:1234/users/e66a8525-85e4-444e-b266-9144ee4d9e6a
+Content-Type: application/json
+
+{
+  "user":"fedev"
+}
+
+### login
+POST  http://localhost:1234/login
+Content-Type:  application/json
+
+{
+  "user":"xjf_255",
+  "password": "pruebasUni4@"
 }
