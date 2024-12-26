@@ -8,10 +8,12 @@ import { validatedPartialUsers, validatedUsers } from './schemas/user.js'
 import { comparePassword, hashPassword } from './utils/hashPassword.js'
 import cookieParser from 'cookie-parser'
 import { generarToken, getInfoToToken } from './utils/generateToken.js'
+import { corsMiddleware } from './middleware/cors.js'
 
 const app = express()
 app.use(cookieParser())
 app.use(json())
+app.use(corsMiddleware())
 app.disable('x-powered-by')
 const PORT = process.env.SERVICE_PORT ?? 3001
 
@@ -23,7 +25,6 @@ if (!supabaseUrl) {
 const client = postgres(supabaseUrl, { debug: true, ssl: "require" })
 const db = drizzle({ client })
 
-// Endpoint para obtener los usuarios
 app.get("/users", async (req: Request, res: Response): Promise<void> => {
   try {
     const data = await db.select({ ...getTableColumns(usersTable) }).from(usersTable)
@@ -141,24 +142,24 @@ app.post('/login', async (req, res): Promise<void> => {
     }
     const token = generarToken(userData)
     res
-    .json({
-      message: "Inicio de sesión exitoso",
-      user: userData,
-      token,
-    })
-    .cookie("access_token",token,{
-      httpOnly:true,
-      sameSite:"strict"
-    })
+      .cookie("access_token", token, {
+        httpOnly: true,
+        sameSite: "strict"
+      }).json({
+        message: "Inicio de sesión exitoso",
+        user: userData,
+        token,
+      })
+
   } catch (error) {
     console.error("Error en el endpoint /login:", error)
     res.status(500).json({ message: "Error interno del servidor" })
   }
 })
 
-app.get("/protected", (req,res):any => {
+app.get("/protected", (req, res): any => {
   const token = req.cookies.access_token
-  if(!token) {
+  if (!token) {
     return res.status(403).send('Acceso no autorizado')
   }
   try {

@@ -6,8 +6,13 @@ import { eq, getTableColumns } from 'drizzle-orm';
 import { usersTable } from './schemas/db.js';
 import { validatedPartialUsers, validatedUsers } from './schemas/user.js';
 import { comparePassword, hashPassword } from './utils/hashPassword.js';
+import cookieParser from 'cookie-parser';
+import { generarToken, getInfoToToken } from './utils/generateToken.js';
+import { corsMiddleware } from './middleware/cors.js';
 const app = express();
+app.use(cookieParser());
 app.use(json());
+app.use(corsMiddleware());
 app.disable('x-powered-by');
 const PORT = process.env.SERVICE_PORT ?? 3001;
 if (!supabaseUrl) {
@@ -16,7 +21,6 @@ if (!supabaseUrl) {
 }
 const client = postgres(supabaseUrl, { debug: true, ssl: "require" });
 const db = drizzle({ client });
-// Endpoint para obtener los usuarios
 app.get("/users", async (req, res) => {
     try {
         const data = await db.select({ ...getTableColumns(usersTable) }).from(usersTable);
@@ -85,39 +89,75 @@ app.put("/users/:id", async (req, res) => {
     }
 });
 app.post('/login', async (req, res) => {
-    const dataUser = validatedPartialUsers(req.body);
-    if (dataUser.error) {
-        res.status(401).json({ message: JSON.parse(dataUser.error.message) });
-        return;
-    }
-    const { password, user, email } = dataUser.data;
-    if (user && password) {
-        const userInfo = await db.select({ ...getTableColumns(usersTable) }).from(usersTable).where(eq(usersTable.user, user));
-        const { password: dbPassword } = userInfo[0];
-        if (await comparePassword({ password: password, hashedPassword: dbPassword })) {
-            res.json(userInfo);
+    try {
+        const dataUser = validatedPartialUsers(req.body);
+        if (dataUser.error) {
+            res.status(400).json({ message: JSON.parse(dataUser.error.message) });
             return;
         }
-        res.status(401).json({ message: "contraseña Incorrecta" });
-        return;
-    }
-    else if (email && password) {
-        const userInfo = await db.select({ ...getTableColumns(usersTable) }).from(usersTable).where(eq(usersTable.email, email));
-        const { password: dbPassword } = userInfo[0];
-        if (await comparePassword({ password: password, hashedPassword: dbPassword })) {
-            res.json(userInfo);
+        const { password, user, email } = dataUser.data;
+        if (!password || !(user || email)) {
+            res.status(400).json({ message: "Faltan datos" });
             return;
         }
-        res.status(401).json({ message: "contraseña Incorrecta" });
-        return;
+        let userInfo;
+        if (user) {
+            userInfo = await db
+                .select({ ...getTableColumns(usersTable) })
+                .from(usersTable)
+                .where(eq(usersTable.user, user));
+        }
+        else if (email) {
+            userInfo = await db
+                .select({ ...getTableColumns(usersTable) })
+                .from(usersTable)
+                .where(eq(usersTable.email, email));
+        }
+        if (!userInfo || userInfo.length === 0) {
+            res.status(404).json({ message: "Credenciales inválidas" });
+            return;
+        }
+        const { password: dbPassword, ...userData } = userInfo[0];
+        const passwordMatch = await comparePassword({
+            password,
+            hashedPassword: dbPassword,
+        });
+        if (!passwordMatch) {
+            res.status(401).json({ message: "Credenciales inválidas" });
+            return;
+        }
+        const token = generarToken(userData);
+        res
+            .cookie("access_token", token, {
+            httpOnly: true,
+            sameSite: "strict"
+        }).json({
+            message: "Inicio de sesión exitoso",
+            user: userData,
+            token,
+        });
     }
-    res.status(404).json({ message: "no se encontro el usuario" });
+    catch (error) {
+        console.error("Error en el endpoint /login:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
 });
-// Ruta raíz para redirigir a /users
+app.get("/protected", (req, res) => {
+    const token = req.cookies.access_token;
+    if (!token) {
+        return res.status(403).send('Acceso no autorizado');
+    }
+    try {
+        const userInfo = getInfoToToken(token);
+        res.json(userInfo);
+    }
+    catch (error) {
+        console.log(error);
+    }
+});
 app.get("/", (req, res) => {
     res.send(`<a href="http://localhost:${PORT}/users">Ver usuarios</a>`);
 });
-// Iniciar servidor
 app.listen(PORT, () => {
     console.log(`Server listening at http://localhost:${PORT}`);
 });
