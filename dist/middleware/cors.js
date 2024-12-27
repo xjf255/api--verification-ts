@@ -5,7 +5,6 @@ export const corsMiddleware = ({ acceptedOrigins = ACCEPTED_ORIGINS } = {}) => c
         if (!origin) {
             return callback(null, true);
         }
-        console.log(acceptedOrigins.includes(origin), origin, acceptedOrigins);
         if (acceptedOrigins.includes(origin)) {
             return callback(null, true);
         }

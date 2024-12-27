@@ -2,7 +2,7 @@ import express, { Request, Response, json } from 'express'
 import { supabaseUrl } from './config.js'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq, getTableColumns, ne } from 'drizzle-orm'
 import { usersTable } from './schemas/db.js'
 import { validatedPartialUsers, validatedUsers } from './schemas/user.js'
 import { comparePassword, hashPassword } from './utils/hashPassword.js'
@@ -50,7 +50,16 @@ app.post("/users", async (req: Request, res: Response): Promise<void> => {
     }
     const userDB = await hashPassword(user.data)
     await db.insert(usersTable).values(userDB)
-    res.status(201).json({ message: "usuario agregado Correctamente" })
+    const newUser = await db.select({ ...getTableColumns(usersTable) }).from(usersTable).where(eq(usersTable.user, userDB.user))
+    const { password, ...userData } = newUser[0]
+    const token = generarToken(userData)
+
+    res.status(201)
+      .cookie("access_token", token, {
+        httpOnly: true,
+        sameSite: "strict"
+      })
+      .json(userData)
   } catch (error: any) {
     if (error.code === "23505") {
       res.status(409).json({ message: "El usuario o correo ya existe" })
@@ -157,16 +166,19 @@ app.post('/login', async (req, res): Promise<void> => {
   }
 })
 
-app.get("/protected", (req, res): any => {
+app.get("/protected", (req: Request, res: Response): any => {
   const token = req.cookies.access_token
+  console.log("Token:", token)
   if (!token) {
-    return res.status(403).send('Acceso no autorizado')
+    return res.status(403).json({ error: "Access denied. No token provided." })
   }
+
   try {
     const userInfo = getInfoToToken(token)
     res.json(userInfo)
   } catch (error) {
-    console.log(error)
+    console.error("Error decoding token:", error)
+    res.status(401).json({ error: "Invalid token." })
   }
 })
 

@@ -45,7 +45,15 @@ app.post("/users", async (req, res) => {
         }
         const userDB = await hashPassword(user.data);
         await db.insert(usersTable).values(userDB);
-        res.status(201).json({ message: "usuario agregado Correctamente" });
+        const newUser = await db.select({ ...getTableColumns(usersTable) }).from(usersTable).where(eq(usersTable.user, userDB.user));
+        const { password, ...userData } = newUser[0];
+        const token = generarToken(userData);
+        res.status(201)
+            .cookie("access_token", token, {
+            httpOnly: true,
+            sameSite: "strict"
+        })
+            .json(userData);
     }
     catch (error) {
         if (error.code === "23505") {
@@ -144,15 +152,17 @@ app.post('/login', async (req, res) => {
 });
 app.get("/protected", (req, res) => {
     const token = req.cookies.access_token;
+    console.log("Token:", token);
     if (!token) {
-        return res.status(403).send('Acceso no autorizado');
+        return res.status(403).json({ error: "Access denied. No token provided." });
     }
     try {
         const userInfo = getInfoToToken(token);
         res.json(userInfo);
     }
     catch (error) {
-        console.log(error);
+        console.error("Error decoding token:", error);
+        res.status(401).json({ error: "Invalid token." });
     }
 });
 app.get("/", (req, res) => {

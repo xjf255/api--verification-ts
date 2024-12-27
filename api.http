@@ -2,9 +2,9 @@ POST http://localhost:1234/users
 Content-Type: application/json
 
 {
-  "user": "fedev",
-  "password": "pruebasUni4@",
-  "email":"administrador@gmail.gt",
+  "user": "fede",
+  "password": "prduebasUni4@",
+  "email":"admi@gmail.gt",
   "sql": "drop * table"
 }
 
