@@ -22,10 +22,19 @@ Content-Type: application/json
 }
 
 ### login
-POST  http://localhost:1234/login
+POST  http://localhost:1234/users/login
 Content-Type:  application/json
 
 {
   "user":"xjf_255",
   "password": "pruebasUni4@"
+}
+
+### login
+POST  http://localhost:1234/users/login
+Content-Type:  application/json
+
+{
+  "user":"@dmin",
+  "password": "juanfher1."
 }
