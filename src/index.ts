@@ -3,10 +3,17 @@ import cookieParser from 'cookie-parser'
 import { corsMiddleware } from './middleware/cors.js'
 import { createUsersRouter } from './routes/users.js'
 import { IUserClass, IUserModel } from './types.js'
+import rateLimit from 'express-rate-limit'
 
 export const createApp = ({ UserModel }: IUserClass) => {
-
   const app = express()
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    legacyHeaders: false,
+    message: 'Too many requests, please try again later.'
+  })
+  app.use(limiter)
   app.use(cookieParser())
   app.use(json())
   app.use(corsMiddleware())
