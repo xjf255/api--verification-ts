@@ -78,7 +78,6 @@ export class UsersController {
             }
         };
         this.login = async (req, res) => {
-            console.log("req.body", req.body);
             try {
                 const dataUser = validatedPartialUsers(req.body);
                 if (dataUser.error) {
