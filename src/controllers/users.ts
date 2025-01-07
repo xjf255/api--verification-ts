@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { validatedPartialUsers, validatedUsers } from "../schemas/user.js";
 import { generarToken, getInfoToToken } from "../utils/generateToken.js";
 import { hashPassword } from "../utils/hashPassword.js";
-
 export class UsersController {
   private userModel
 
@@ -25,24 +24,29 @@ export class UsersController {
 
   createUser = async (req: Request, res: Response): Promise<void> => {
     try {
+      const file = req.file
+      console.log(req.file, req.body)
       const user = validatedUsers(req.body)
       if (user.error) {
         res.status(400).json({ message: JSON.parse(user.error.message) })
         return
       }
-      const userData = await this.userModel.create(user.data)
-      const token = generarToken(userData)
+      console.log('img cargada')
+      return
+      // const userData = await this.userModel.create(user.data)
+      // const token = generarToken(userData)
 
-      res.status(201)
-        .cookie("access_token", token, {
-          httpOnly: true,
-          sameSite: "strict"
-        })
-        .json(userData)
+      // res.status(201)
+      //   .cookie("access_token", token, {
+      //     httpOnly: true,
+      //     sameSite: "strict"
+      //   })
+      //   .json(userData)
     } catch (error: any) {
       if (error.code === "23505") {
-        res.status(409).json({ message: "El usuario o correo ya existe" })
+        res.status(409).json({ message: "El usuario o correo no valido" })
       } else {
+        console.log(error)
         res.status(500).json({ message: "Error interno del servidor" })
       }
     }
