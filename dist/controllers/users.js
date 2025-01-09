@@ -1,6 +1,7 @@
 import { validatedPartialUsers, validatedUsers } from "../schemas/user.js";
 import { generarToken, getInfoToToken } from "../utils/generateToken.js";
 import { hashPassword } from "../utils/hashPassword.js";
+import { deleteImage, loaderImage } from "../utils/cloudMethods.js";
 export class UsersController {
     constructor({ UserModel }) {
         this.getAll = async (req, res) => {
@@ -20,24 +21,25 @@ export class UsersController {
         this.createUser = async (req, res) => {
             try {
                 const file = req.file;
-                console.log(req.file, req.body);
+                if (file) {
+                    req.body.avatar = await loaderImage({ file });
+                }
                 const user = validatedUsers(req.body);
                 if (user.error) {
                     res.status(400).json({ message: JSON.parse(user.error.message) });
                     return;
                 }
-                console.log('img cargada');
-                return;
-                // const userData = await this.userModel.create(user.data)
-                // const token = generarToken(userData)
-                // res.status(201)
-                //   .cookie("access_token", token, {
-                //     httpOnly: true,
-                //     sameSite: "strict"
-                //   })
-                //   .json(userData)
+                const userData = await this.userModel.create(user.data);
+                const token = generarToken(userData);
+                res.status(201)
+                    .cookie("access_token", token, {
+                    httpOnly: true,
+                    sameSite: "strict"
+                })
+                    .json(userData);
             }
             catch (error) {
+                console.log(error);
                 if (error.code === "23505") {
                     res.status(409).json({ message: "El usuario o correo no valido" });
                 }
@@ -53,6 +55,14 @@ export class UsersController {
                 if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
                     res.status(400).json({ message: "ID inválido" });
                     return;
+                }
+                const file = req.file;
+                if (file) {
+                    req.body.avatar = await loaderImage({ file });
+                    const { avatar } = await this.userModel.getById(id);
+                    if (avatar && avatar !== "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp") {
+                        const res = await deleteImage(avatar);
+                    }
                 }
                 const updatedUserInfo = validatedPartialUsers(req.body);
                 if (updatedUserInfo.error) {
@@ -75,7 +85,7 @@ export class UsersController {
             }
             catch (error) {
                 if (error.code === "23505") {
-                    res.status(409).json({ message: "El usuario o correo ya existe" });
+                    res.status(409).json({ message: "El usuario o correo no valido" });
                 }
                 else {
                     res.status(500).json({ message: "Error interno del servidor" });
@@ -127,6 +137,24 @@ export class UsersController {
             catch (error) {
                 console.error("Error decoding token:", error);
                 res.status(401).json({ error: "Invalid token." });
+            }
+        };
+        this.logout = (req, res) => {
+            res.clearCookie("access_token").json({ message: "Logout exitoso" });
+        };
+        this.deleteUser = (req, res) => {
+            const { id } = req.params;
+            if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+                res.status(400).json({ message: "ID inválido" });
+                return;
+            }
+            const response = this.userModel.updateUser({ isActive: false }, id);
+            if (!response) {
+                res
+                    .clearCookie("access_token")
+                    .status(404)
+                    .json({ message: "Usuario no encontrado" });
+                return;
             }
         };
         this.userModel = UserModel;

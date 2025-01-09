@@ -2,11 +2,9 @@ import { Router } from "express"
 import { UsersController } from "../controllers/users.js"
 import { IUserClass } from "../types.js"
 import multer from "multer";
-import CloudinaryStorage from "../utils/cloudinaryStorage.js";
 
-const storage = new CloudinaryStorage()
+const storage = multer.memoryStorage()
 const upload = multer({ storage });
-
 export const createUsersRouter = ({ UserModel }: IUserClass) => {
   const userRouter = Router()
   const usersController = new UsersController({ UserModel })

@@ -1,4 +1,4 @@
-import z, { object } from 'zod'
+import z from 'zod'
 import { CreatedUser } from '../types.js'
 
 const schemaUsers = z.object({
@@ -10,6 +10,7 @@ const schemaUsers = z.object({
   "email": z.string().regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     "Correo electrónico inválido"),
   "avatar": z.string().url().optional(),
+  "phone": z.number().int().positive().max(8).optional(),
 })
 
 export function validatedUsers(object: CreatedUser) {

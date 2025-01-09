@@ -18,6 +18,7 @@ class CloudinaryStorage {
                 filename: result.public_id,
             });
         });
+        console.log(file);
         file.stream.pipe(uploadStream);
     }
     _removeFile(req, file, cb) {

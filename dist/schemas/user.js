@@ -4,6 +4,7 @@ const schemaUsers = z.object({
     "password": z.string().min(8, "La contraseña debe tener al menos 8 caracteres").regex(/^(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>])/, "La cadena debe contener al menos un número y un carácter especial"),
     "email": z.string().regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Correo electrónico inválido"),
     "avatar": z.string().url().optional(),
+    "phone": z.number().int().positive().max(8).optional(),
 });
 export function validatedUsers(object) {
     return schemaUsers.safeParse(object);

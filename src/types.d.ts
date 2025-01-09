@@ -4,6 +4,7 @@ export interface User {
   password: string,
   email:string,
   avatar:string,
+  phone?:number | null,
   resetToken?:string | null,
   resetTokenExpires?:Date | null,
   isActive:boolean | null,

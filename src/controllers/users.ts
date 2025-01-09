@@ -1,12 +1,13 @@
-import { Request, Response } from "express";
-import { validatedPartialUsers, validatedUsers } from "../schemas/user.js";
-import { generarToken, getInfoToToken } from "../utils/generateToken.js";
-import { hashPassword } from "../utils/hashPassword.js";
+import { Request, Response } from "express"
+import { validatedPartialUsers, validatedUsers } from "../schemas/user.js"
+import { generarToken, getInfoToToken } from "../utils/generateToken.js"
+import { hashPassword } from "../utils/hashPassword.js"
+import { deleteImage, loaderImage } from "../utils/cloudMethods.js"
 export class UsersController {
   private userModel
 
   constructor({ UserModel }: any) {
-    this.userModel = UserModel;
+    this.userModel = UserModel
   }
   getAll = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -25,26 +26,32 @@ export class UsersController {
   createUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const file = req.file
-      console.log(req.file, req.body)
+      if (file) {
+        req.body.avatar = await loaderImage({ file })
+      }
       const user = validatedUsers(req.body)
       if (user.error) {
         res.status(400).json({ message: JSON.parse(user.error.message) })
         return
       }
-      console.log('img cargada')
-      return
-      // const userData = await this.userModel.create(user.data)
-      // const token = generarToken(userData)
 
-      // res.status(201)
-      //   .cookie("access_token", token, {
-      //     httpOnly: true,
-      //     sameSite: "strict"
-      //   })
-      //   .json(userData)
+      const userData = await this.userModel.create(user.data)
+      const token = generarToken(userData)
+
+      res.status(201)
+        .cookie("access_token", token, {
+          httpOnly: true,
+          sameSite: "strict"
+        })
+        .json(userData)
     } catch (error: any) {
+      console.log(error)
       if (error.code === "23505") {
-        res.status(409).json({ message: "El usuario o correo no valido" })
+        if (error.constraint === "users_email_unique") {
+          res.status(409).json({ message: "El correo ya esta en uso" })
+        } else {
+          res.status(409).json({ message: "El usuario ya esta en uso" })
+        }
       } else {
         console.log(error)
         res.status(500).json({ message: "Error interno del servidor" })
@@ -59,6 +66,18 @@ export class UsersController {
       if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
         res.status(400).json({ message: "ID inválido" })
         return
+      }
+
+      const file = req.file
+      if (file) {
+        req.body.avatar = await loaderImage({ file })
+        const { avatar } = await this.userModel.getById(id)
+        if (avatar && avatar !== "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp") {
+          const res = await deleteImage(avatar)
+          if (res.error) {
+            console.error("Error al eliminar la imagen:", res.error)
+          }
+        }
       }
 
       const updatedUserInfo = validatedPartialUsers(req.body)
@@ -78,6 +97,7 @@ export class UsersController {
         const userUpdated = await hashPassword(validData)
         userToUpdate = userUpdated
       }
+
       const isUpdated = await this.userModel.updateUser(userToUpdate, id)
       if (!isUpdated) {
         throw new Error("Usuario no encontrado")
@@ -85,7 +105,7 @@ export class UsersController {
       res.json({ message: "Usuario actualizado Correctamente" })
     } catch (error: any) {
       if (error.code === "23505") {
-        res.status(409).json({ message: "El usuario o correo ya existe" })
+        res.status(409).json({ message: "El usuario o correo no valido" })
       } else {
         res.status(500).json({ message: "Error interno del servidor" })
       }
@@ -108,6 +128,14 @@ export class UsersController {
       if (!userData) {
         res.status(404).json({ message: "Credenciales inválidas" })
         return
+      }
+
+      if (!userData.isActive) {
+        res.status(403).json({ message: "Usuario inactivo" })
+        res.cookie("reactive", userData.id, {
+          httpOnly: true,
+          sameSite: "strict"
+        })
       }
 
       const token = generarToken(userData)
@@ -140,5 +168,47 @@ export class UsersController {
       console.error("Error decoding token:", error)
       res.status(401).json({ error: "Invalid token." })
     }
+  }
+
+  reactive = async (req: Request, res: Response): Promise<any> => {
+    const id = req.cookies.reactive
+    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+      res.status(400).json({ message: "ID inválido" })
+      return
+    }
+    const response = await this.userModel.updateUser({ isActive: true }, id)
+    if (!response) {
+      res.status(404).json({ message: "Usuario no encontrado" })
+      return
+    }
+    res.clearCookie("reactive").json({ message: "Usuario reactivado" })
+  }
+
+  logout = (req: Request, res: Response): any => {
+    res.clearCookie("access_token").json({ message: "Logout exitoso" })
+  }
+
+  deleteUser = async (req: Request, res: Response): Promise<any> => {
+    const { id } = req.params
+    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+      res.status(400).json({ message: "ID inválido" })
+      return
+    }
+    const response = await this.userModel.updateUser({ isActive: false }, id)
+    if (!response) {
+      res
+        .clearCookie("access_token")
+        .status(404)
+        .json({ message: "Usuario no encontrado" })
+      return
+    }
+  }
+
+  resetPasswordMail = async (req: Request, res: Response): any => {
+
+  }
+
+  resetPasswordMsg = async (req: Request,res: Response): any => {
+
   }
 }
