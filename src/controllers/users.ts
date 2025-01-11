@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
-import { validatedPartialUsers, validatedUsers } from "../schemas/user.js"
+import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
 import { generarToken, getInfoToToken } from "../utils/generateToken.js"
-import { hashPassword } from "../utils/hashPassword.js"
+import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../utils/cloudMethods.js"
 export class UsersController {
   private userModel
@@ -204,11 +204,74 @@ export class UsersController {
     }
   }
 
-  resetPasswordMail = async (req: Request, res: Response): any => {
+  resetPasswordMail = async (req: Request, res: Response): Promise<any> => {
 
   }
 
-  resetPasswordMsg = async (req: Request,res: Response): any => {
+  sendResetPassword = async (req: Request, res: Response): Promise<any> => {
+    const { email } = req.body
+    if (!email) {
+      res.status(400).json({ message: "Faltan datos" })
+      return
+    }
+    try {
+      const isValidaMail = validatedEmailUsers({ email })
+      if (isValidaMail.error) {
+        res.status(400).json({ message: JSON.parse(isValidaMail.error.message) })
+        return
+      }
+      const user = await this.userModel.getByEmail(email)
+      if (!user) {
+        res.status(404).json({ message: "Usuario no encontrado" })
+        return
+      }
+      const { id, phone, rebootAttempts } = user
+      if (!phone) {
+        res.status(401).json({ message: "Telefono no existente" })
+      }
+      if (rebootAttempts < 3 || rebootAttempts === 0) {
+        res.status(401).json({ message: "Intentalo más tarde" })
+      }
+      const code = Math.round(Math.random() * 1000000).toLocaleString()
+      const hashedCode = await hashCode(code)
+      const time = new Date(Date.now() + (10 * 60 * 1000))
+      const data = {
+        rebootAttempts: rebootAttempts - 1,
+        resetTokenExpires: time.getTime(),
+        resetToken: hashedCode
+      }
+      const isUpdated = await this.userModel.updateUser(data, id)
+      if (isUpdated) {
+        res.json({ message: "codigo enviado Correctamente" })
+      }
+      res.json({ message: "Error al enviar el codigo" })
 
+    } catch (error) {
+
+    }
+  }
+
+  resetPassword = async (req: Request, res: Response): Promise<any> => {
+    const { id } = req.params
+    const { code } = req.body
+    if (!code || !/^[0-9]{6}$/.test(code)) {
+      res.status(400).json({ message: "Código inválido" })
+      return
+    }
+    try {
+      const response = await this.userModel.getById(id)
+      if (!response) {
+        res.status(404).json({ message: "Usuario no encontrado" })
+        return
+      }
+      if (response.resetToken !== code) {
+        res.status(400).json({ message: "Código inválido" })
+        return
+      }
+      res.json({ message: "Código válido" })
+    } catch (error) {
+      console.error("Error al verificar el código:", error)
+      res.status(500).json({ message: "Error interno del servidor" })
+    }
   }
 }

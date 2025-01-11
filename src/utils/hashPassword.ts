@@ -16,3 +16,8 @@ interface Props {
 export async function comparePassword({ password, hashedPassword }: Props) {
   return await bcrypt.compare(password, hashedPassword)
 }
+
+export async function hashCode(code: string){
+  const newCode = await bcrypt.hash(code,SALT_ROUND)
+  return newCode
+}
