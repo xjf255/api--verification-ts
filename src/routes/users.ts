@@ -11,7 +11,14 @@ export const createUsersRouter = ({ UserModel }: IUserClass) => {
   userRouter.get('/', usersController.getAll.bind(usersController))
   userRouter.post('/', upload.single('avatar'), usersController.createUser.bind(usersController))
   userRouter.put('/:id', upload.single('avatar'), usersController.updateUser.bind(usersController))
-  userRouter.post('/login', usersController.login.bind(usersController))
-  userRouter.get('/protected', usersController.protected.bind(usersController))
-  return userRouter
+  userRouter.delete('/:id', usersController.deleteUser.bind(usersController))
+  userRouter.get('/reactive', usersController.reactiveUser.bind(usersController))
+  userRouter.put('/:id', usersController.resetPassword.bind(usersController))
+ return userRouter
 }
+
+/* 
+PUT indempotente(a pesar que se realice varias veces la misma peticion
+cada vez genera o retorna lo mismo)
+POST no es indempotente
+*/

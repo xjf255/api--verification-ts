@@ -4,6 +4,7 @@ import { corsMiddleware } from './middleware/cors.js'
 import { createUsersRouter } from './routes/users.js'
 import { IUserClass, IUserModel } from './types.js'
 import rateLimit from 'express-rate-limit'
+import { createVerificationRouter } from './routes/verification.js'
 
 export const createApp = ({ UserModel }: IUserClass) => {
   const app = express()
@@ -19,6 +20,7 @@ export const createApp = ({ UserModel }: IUserClass) => {
   app.use(corsMiddleware())
   app.disable('x-powered-by')
   app.use("/users", createUsersRouter({ UserModel }))
+  app.use("/verification", createVerificationRouter({ UserModel }))
 
   const PORT = process.env.SERVICE_PORT ?? 3001
 

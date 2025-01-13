@@ -112,82 +112,6 @@ export class UsersController {
     }
   }
 
-  login = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const dataUser = validatedPartialUsers(req.body)
-      if (dataUser.error) {
-        res.status(400).json({ message: JSON.parse(dataUser.error.message) })
-        return
-      }
-      const { password, user, email } = dataUser.data
-      if (!password || !(user || email)) {
-        res.status(400).json({ message: "Faltan datos" })
-        return
-      }
-      const userData = await this.userModel.login({ user, email, password })
-      if (!userData) {
-        res.status(404).json({ message: "Credenciales inválidas" })
-        return
-      }
-
-      if (!userData.isActive) {
-        res.status(403).json({ message: "Usuario inactivo" })
-        res.cookie("reactive", userData.id, {
-          httpOnly: true,
-          sameSite: "strict"
-        })
-      }
-
-      const token = generarToken(userData)
-      res
-        .cookie("access_token", token, {
-          httpOnly: true,
-          sameSite: "strict"
-        }).json({
-          message: "Inicio de sesión exitoso",
-          user: userData,
-          token,
-        })
-
-    } catch (error) {
-      console.error("Error en el endpoint /login:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
-    }
-  }
-
-  protected = (req: Request, res: Response): any => {
-    const token = req.cookies.access_token
-    if (!token) {
-      return res.status(403).json({ error: "Access denied. No token provided." })
-    }
-
-    try {
-      const userInfo = getInfoToToken(token)
-      res.json(userInfo)
-    } catch (error) {
-      console.error("Error decoding token:", error)
-      res.status(401).json({ error: "Invalid token." })
-    }
-  }
-
-  reactive = async (req: Request, res: Response): Promise<any> => {
-    const id = req.cookies.reactive
-    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
-      res.status(400).json({ message: "ID inválido" })
-      return
-    }
-    const response = await this.userModel.updateUser({ isActive: true }, id)
-    if (!response) {
-      res.status(404).json({ message: "Usuario no encontrado" })
-      return
-    }
-    res.clearCookie("reactive").json({ message: "Usuario reactivado" })
-  }
-
-  logout = (req: Request, res: Response): any => {
-    res.clearCookie("access_token").json({ message: "Logout exitoso" })
-  }
-
   deleteUser = async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params
     if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
@@ -202,6 +126,22 @@ export class UsersController {
         .json({ message: "Usuario no encontrado" })
       return
     }
+  }
+
+  reactiveUser = async (req: Request, res: Response): Promise<any> => {
+    const token = req.cookies.reactive
+    const id = getInfoToToken(token)
+    console.log(id)
+    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id.toString())) {
+      res.status(400).json({ message: "ID inválido" })
+      return
+    }
+    const response = await this.userModel.updateUser({ isActive: true }, id)
+    if (!response) {
+      res.status(404).json({ message: "Usuario no encontrado" })
+      return
+    }
+    res.clearCookie("reactive").json({ message: "Usuario reactivado" })
   }
 
   resetPasswordMail = async (req: Request, res: Response): Promise<any> => {
