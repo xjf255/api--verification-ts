@@ -13,7 +13,7 @@ export const createUsersRouter = ({ UserModel }: IUserClass) => {
   userRouter.put('/:id', upload.single('avatar'), usersController.updateUser.bind(usersController))
   userRouter.delete('/:id', usersController.deleteUser.bind(usersController))
   userRouter.get('/reactive', usersController.reactiveUser.bind(usersController))
-  userRouter.put('/:id', usersController.resetPassword.bind(usersController))
+  // userRouter.put('/:id', usersController.resetPassword.bind(usersController))
  return userRouter
 }
 

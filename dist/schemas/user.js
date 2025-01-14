@@ -12,3 +12,6 @@ export function validatedUsers(object) {
 export function validatedPartialUsers(object) {
     return schemaUsers.partial().safeParse(object);
 }
+export function validatedEmailUsers(object) {
+    return schemaUsers.partial().safeParse(object);
+}

@@ -13,7 +13,7 @@ export interface User {
 }
 
 export type CleanUser = Omit<User,"password">
-export type ValidateEmail = Pick<User,"email">
+export type ValidateToReset = Pick<User,"email" , "user">
 export type CreatedUser = Omit<User,"created_at","updatedAt","isActive">
 
 interface IUserModel {

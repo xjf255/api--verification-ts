@@ -1,5 +1,5 @@
 import z from 'zod'
-import { CreatedUser, ValidateEmail } from '../types.js'
+import { CreatedUser, ValidateToReset } from '../types.js'
 
 const schemaUsers = z.object({
   "user": z.string().max(8, "El usuario puede tener un maximo de 8 caracteres").nullable(),
@@ -21,6 +21,6 @@ export function validatedPartialUsers(object: Partial<CreatedUser>) {
   return schemaUsers.partial().safeParse(object)
 }
 
-export function validatedEmailUsers(object: ValidateEmail) {
+export function validatedEmailUsers(object: Partial<ValidateToReset>) {
   return schemaUsers.partial().safeParse(object)
 }

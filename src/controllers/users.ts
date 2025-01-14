@@ -3,6 +3,7 @@ import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../s
 import { generarToken, getInfoToToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../utils/cloudMethods.js"
+import { sendMail } from "../utils/sendMail.js"
 export class UsersController {
   private userModel
 
@@ -11,6 +12,8 @@ export class UsersController {
   }
   getAll = async (req: Request, res: Response): Promise<void> => {
     try {
+      const messageId = await sendMail({ addressee: "juanfher.255@gmail.com" })
+      console.log(messageId)
       const data = await this.userModel.getAll()
       if (data.length === 0) {
         res.status(404).json({ message: "Sin existencias" })
@@ -144,51 +147,49 @@ export class UsersController {
     res.clearCookie("reactive").json({ message: "Usuario reactivado" })
   }
 
-  resetPasswordMail = async (req: Request, res: Response): Promise<any> => {
-
-  }
-
-  sendResetPassword = async (req: Request, res: Response): Promise<any> => {
-    const { email } = req.body
-    if (!email) {
-      res.status(400).json({ message: "Faltan datos" })
-      return
-    }
+  //envia una URL al correo del usuario
+  resetLogin = async (req: Request, res: Response): Promise<any> => {
     try {
-      const isValidaMail = validatedEmailUsers({ email })
-      if (isValidaMail.error) {
-        res.status(400).json({ message: JSON.parse(isValidaMail.error.message) })
+      //en el req.body puede venir el email o el user
+      const { user, email } = req.body
+      const isValidInfo = validatedEmailUsers(user ?? email)
+      if (isValidInfo.error) {
+        res.status(400).json({ message: JSON.parse(isValidInfo.error.message) })
         return
       }
-      const user = await this.userModel.getByEmail(email)
-      if (!user) {
+      const { user: validUser, email: validEmail } = isValidInfo.data
+      const userData = await this.userModel.getByInfo(validEmail ?? validUser)
+      if (!userData) {
         res.status(404).json({ message: "Usuario no encontrado" })
         return
       }
-      const { id, phone, rebootAttempts } = user
-      if (!phone) {
-        res.status(401).json({ message: "Telefono no existente" })
-      }
-      if (rebootAttempts < 3 || rebootAttempts === 0) {
+      const { id, rebootAttempts } = userData
+      if (rebootAttempts === 0) {
         res.status(401).json({ message: "Intentalo más tarde" })
       }
-      const code = Math.round(Math.random() * 1000000).toLocaleString()
-      const hashedCode = await hashCode(code)
+
       const time = new Date(Date.now() + (10 * 60 * 1000))
-      const data = {
-        rebootAttempts: rebootAttempts - 1,
-        resetTokenExpires: time.getTime(),
-        resetToken: hashedCode
-      }
+      const data = { resetTokenExpires: time.getTime() }
       const isUpdated = await this.userModel.updateUser(data, id)
-      if (isUpdated) {
-        res.json({ message: "codigo enviado Correctamente" })
+      if (!isUpdated) {
+        res.json({ message: "Error al enviar el URL" })
       }
-      res.json({ message: "Error al enviar el codigo" })
-
+      //todo
+      res.json({ message: "se envio la url" })
     } catch (error) {
-
+      console.error("Error en resetLogin:", error)
+      res.status(500).json({ message: "Error interno del servidor" })
     }
+  }
+
+  //si el usuario ingreso a la URL,
+  //'/two_factor?token=fslkfjasl' 
+  authentication = async (req: Request, res: Response): Promise<any> => {
+    const { token } = req.params
+    if(!token){
+      res.status(401).json({message:'Token invalido'})
+    }
+    
   }
 
   resetPassword = async (req: Request, res: Response): Promise<any> => {
