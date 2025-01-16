@@ -14,11 +14,11 @@ GET http://localhost:1234/users
 
 ### change password
 
-PUT http://localhost:1234/users/e66a8525-85e4-444e-b266-9144ee4d9e6a
+PUT http://localhost:1234/users/af0be6fd-184e-4185-aa48-0f6f4a7c8fed
 Content-Type: application/json
 
 {
-  "user":"fedev"
+  "email":"juanfher.255@gmail.com"
 }
 
 ### login
@@ -37,4 +37,12 @@ Content-Type:  application/json
 {
   "user":"@dmin",
   "password": "juanfher1."
+}
+
+### reset login
+POST  http://localhost:1234/users/resetLogin
+Content-Type:  application/json
+
+{
+  "user":"xjf_255"
 }

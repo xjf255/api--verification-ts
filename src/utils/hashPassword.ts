@@ -9,15 +9,15 @@ export async function hashPassword(user: CreatedUser) {
 }
 
 interface Props {
-  password:string,
-  hashedPassword:string
+  input: string,
+  hashedInput: string
 }
 
-export async function comparePassword({ password, hashedPassword }: Props) {
-  return await bcrypt.compare(password, hashedPassword)
+export async function comparePassword({ input, hashedInput }: Props) {
+  return await bcrypt.compare(input, hashedInput)
 }
 
-export async function hashCode(code: string){
-  const newCode = await bcrypt.hash(code,SALT_ROUND)
+export async function hashCode(input: string) {
+  const newCode = await bcrypt.hash(input, SALT_ROUND)
   return newCode
 }

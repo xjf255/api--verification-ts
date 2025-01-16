@@ -11,12 +11,12 @@ const transporter = createTransport({
   },
 })
 
-export async function sendMail({ addressee }: { addressee: string }) {
+export async function sendMail({ addressee, data }: { addressee: string, data: string }) {
   const info = await transporter.sendMail({
     from: `"Optimized Life 🌱" <${MAIL}>`,
     to: addressee,
     subject: "Ahora es mas facil volver a acceder a Trello copy ✔",
-    html: "<b>Hello world?</b>",
+    html: data,
   });
 
   return info.messageId

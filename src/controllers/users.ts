@@ -1,19 +1,19 @@
 import { Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
 import { generarToken, getInfoToToken } from "../utils/generateToken.js"
-import { hashCode, hashPassword } from "../utils/hashPassword.js"
-import { deleteImage, loaderImage } from "../utils/cloudMethods.js"
-import { sendMail } from "../utils/sendMail.js"
+import { hashPassword } from "../utils/hashPassword.js"
+import { deleteImage, loaderImage } from "../services/cloudMethods.js"
+import { sendMail } from "../services/sendMail.js"
+import { CleanUser, IUserClass } from "../types.js"
+import ejs from "ejs"
 export class UsersController {
   private userModel
 
-  constructor({ UserModel }: any) {
+  constructor({ UserModel }: IUserClass) {
     this.userModel = UserModel
   }
   getAll = async (req: Request, res: Response): Promise<void> => {
     try {
-      const messageId = await sendMail({ addressee: "juanfher.255@gmail.com" })
-      console.log(messageId)
       const data = await this.userModel.getAll()
       if (data.length === 0) {
         res.status(404).json({ message: "Sin existencias" })
@@ -74,7 +74,12 @@ export class UsersController {
       const file = req.file
       if (file) {
         req.body.avatar = await loaderImage({ file })
-        const { avatar } = await this.userModel.getById(id)
+        const data = await this.userModel.getById(id)
+        if (!data) {
+          res.status(404).json({ message: "usuario no existente" })
+          return
+        }
+        const { avatar } = data
         if (avatar && avatar !== "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp") {
           const res = await deleteImage(avatar)
           if (res.error) {
@@ -139,7 +144,7 @@ export class UsersController {
       res.status(400).json({ message: "ID inválido" })
       return
     }
-    const response = await this.userModel.updateUser({ isActive: true }, id)
+    const response = await this.userModel.updateUser({ isActive: true }, id.toString())
     if (!response) {
       res.status(404).json({ message: "Usuario no encontrado" })
       return
@@ -152,30 +157,58 @@ export class UsersController {
     try {
       //en el req.body puede venir el email o el user
       const { user, email } = req.body
-      const isValidInfo = validatedEmailUsers(user ?? email)
+      const isValidInfo = validatedEmailUsers({
+        user, email
+      })
       if (isValidInfo.error) {
         res.status(400).json({ message: JSON.parse(isValidInfo.error.message) })
         return
       }
       const { user: validUser, email: validEmail } = isValidInfo.data
-      const userData = await this.userModel.getByInfo(validEmail ?? validUser)
+      const valueOfUser = validEmail ?? validUser
+      if (!valueOfUser) {
+        res.status(404).json({ message: 'no ingreso ningun valor para buscar el usuario' })
+        return
+      }
+      const userData = await this.userModel.getByInfo(valueOfUser)
       if (!userData) {
         res.status(404).json({ message: "Usuario no encontrado" })
         return
       }
-      const { id, rebootAttempts } = userData
-      if (rebootAttempts === 0) {
+      const { id, user: userName, email: addressee, rebootAttempts } = userData as CleanUser
+      if (rebootAttempts === 0 || !id) {
         res.status(401).json({ message: "Intentalo más tarde" })
+        return
       }
 
-      const time = new Date(Date.now() + (10 * 60 * 1000))
-      const data = { resetTokenExpires: time.getTime() }
+      const time = new Date(Date.now() + 5 * 60 * 1000)
+      const data = { resetTokenExpires: time, rebootAttempts: rebootAttempts - 1 }
+      console.log(data)
       const isUpdated = await this.userModel.updateUser(data, id)
       if (!isUpdated) {
-        res.json({ message: "Error al enviar el URL" })
+        res.status(500).json({ message: "Error al actualizar los datos del usuario" })
+        return
       }
-      //todo
-      res.json({ message: "se envio la url" })
+      const templatePath = "../view/user/templateMail.ejs"
+      const templateData = { name: userName, url: '45654654' }
+
+      ejs.renderFile(templatePath, templateData, async (err, html) => {
+        if (err) {;
+          console.error("Error al renderizar la plantilla:", err.message)
+          res.status(500).json({ message: "Error al procesar la plantilla del correo." })
+          return
+        }
+
+        try {
+          // Enviar el correo
+          const messageId = await sendMail({ addressee, data: "hola" })
+          console.log("Correo enviado con ID:", messageId)
+          res.json({ message: "Se envió la URL correctamente." })
+        } catch (mailError) {
+          console.error("Error al enviar el correo:", mailError)
+          res.status(500).json({ message: "Error al enviar el correo." })
+        }
+      })
     } catch (error) {
       console.error("Error en resetLogin:", error)
       res.status(500).json({ message: "Error interno del servidor" })
@@ -186,27 +219,16 @@ export class UsersController {
   //'/two_factor?token=fslkfjasl' 
   authentication = async (req: Request, res: Response): Promise<any> => {
     const { token } = req.params
-    if(!token){
-      res.status(401).json({message:'Token invalido'})
-    }
-    
-  }
+    // const token = 135462dddddd
 
-  resetPassword = async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params
-    const { code } = req.body
-    if (!code || !/^[0-9]{6}$/.test(code)) {
-      res.status(400).json({ message: "Código inválido" })
-      return
-    }
+  }
+  //el usuario envia el token
+  validationToken = async (req: Request, res: Response): Promise<any> => {
+    const { token } = req.params
     try {
-      const response = await this.userModel.getById(id)
+      const response = await this.userModel.getByToken(token)
       if (!response) {
         res.status(404).json({ message: "Usuario no encontrado" })
-        return
-      }
-      if (response.resetToken !== code) {
-        res.status(400).json({ message: "Código inválido" })
         return
       }
       res.json({ message: "Código válido" })

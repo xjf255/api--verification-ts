@@ -1,16 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2020",                 // Soporte moderno para Node.js (v14+).
-    "module": "NodeNext",                 // Usa módulos ESM (import/export).
-    "moduleResolution": "nodenext",     // Resolución de módulos estilo Node.js con ESM.
-    "outDir": "./dist",                 // Carpeta donde se generará el código compilado.
-    "rootDir": "./src",                 // Carpeta raíz del código fuente.
-    "strict": true,                     // Activa verificaciones estrictas de TypeScript.
-    "esModuleInterop": true,            // Opcional, para compatibilidad con CommonJS.
+    "target": "ES2020", // Soporte moderno para Node.js (v14+).
+    "module": "NodeNext", // Usa módulos ESM (import/export).
+    "moduleResolution": "nodenext", // Resolución de módulos estilo Node.js con ESM.
+    "outDir": "./dist", // Carpeta donde se generará el código compilado.
+    "rootDir": "./src", // Carpeta raíz del código fuente.
+    "strict": true, // Activa verificaciones estrictas de TypeScript.
+    "esModuleInterop": true, // Opcional, para compatibilidad con CommonJS.
     "allowSyntheticDefaultImports": true, // Importaciones predeterminadas simplificadas.
-    "resolveJsonModule": true,          // Permite importar archivos JSON.
-    "skipLibCheck": true                // Omite la verificación de tipos en `node_modules`.
+    "resolveJsonModule": true, // Permite importar archivos JSON.
+    "skipLibCheck": true // Omite la verificación de tipos en `node_modules`.
   },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*.ts",
+    "src/view/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.ejs"
+  ]
 }
