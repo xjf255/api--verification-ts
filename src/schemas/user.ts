@@ -9,8 +9,11 @@ const schemaUsers = z.object({
   ),
   "email": z.string().regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     "Correo electrónico inválido"),
-  "avatar": z.string().url().optional(),
-  "phone": z.number().int().positive().max(8).optional(),
+  "avatar": z.string().url(),
+  "phone": z
+    .string()
+    .length(8, "El número de teléfono debe tener exactamente 8 dígitos.")
+    .regex(/^\d+$/, "El número de teléfono solo puede contener dígitos."),
 })
 
 export function validatedUsers(object: CreatedUser) {

@@ -4,6 +4,8 @@ import { hashPassword } from "../utils/hashPassword.js";
 import { deleteImage, loaderImage } from "../services/cloudMethods.js";
 import { sendMail } from "../services/sendMail.js";
 import ejs from "ejs";
+import path from "path";
+import getDirname from "../utils/dirname.js";
 export class UsersController {
     constructor({ UserModel }) {
         this.getAll = async (req, res) => {
@@ -166,26 +168,25 @@ export class UsersController {
                     return;
                 }
                 const time = new Date(Date.now() + 5 * 60 * 1000);
-                const data = { resetTokenExpires: time, rebootAttempts: rebootAttempts - 1 };
-                console.log(data);
-                const isUpdated = await this.userModel.updateUser(data, id);
-                if (!isUpdated) {
-                    res.status(500).json({ message: "Error al actualizar los datos del usuario" });
-                    return;
-                }
-                const templatePath = "../view/user/templateMail.ejs";
-                const templateData = { name: userName, url: '45654654' };
+                const token = generarToken({ codigo: Math.floor(Math.random() * 1000000).toString() }, "5m");
+                const data = { resetTokenExpires: time, rebootAttempts: rebootAttempts - 1, resetToken: token };
+                const templatePath = path.join(getDirname(), "../view/user/templateMail.ejs");
+                const templateData = { name: userName, url: token };
                 ejs.renderFile(templatePath, templateData, async (err, html) => {
                     if (err) {
-                        ;
                         console.error("Error al renderizar la plantilla:", err.message);
                         res.status(500).json({ message: "Error al procesar la plantilla del correo." });
                         return;
                     }
                     try {
                         // Enviar el correo
-                        const messageId = await sendMail({ addressee, data: "hola" });
+                        const messageId = await sendMail({ addressee, data: html });
                         console.log("Correo enviado con ID:", messageId);
+                        const isUpdated = await this.userModel.updateUser(data, id);
+                        if (!isUpdated) {
+                            res.status(500).json({ message: "Error al actualizar los datos del usuario" });
+                            return;
+                        }
                         res.json({ message: "Se envió la URL correctamente." });
                     }
                     catch (mailError) {
@@ -202,14 +203,32 @@ export class UsersController {
         //si el usuario ingreso a la URL,
         //'/two_factor?token=fslkfjasl' 
         this.authentication = async (req, res) => {
-            const { token } = req.params;
-            // const token = 135462dddddd
-        };
-        //el usuario envia el token
-        this.validationToken = async (req, res) => {
-            const { token } = req.params;
             try {
-                const response = await this.userModel.getByToken(token);
+                const { token } = req.params;
+                const infoUser = await this.userModel.getByToken(token);
+                if (!infoUser) {
+                    res.status(404).json({ message: "no se encontro el usuario" });
+                    return;
+                }
+                const { phone, id } = infoUser;
+                if (!phone || !id) {
+                    res.status(404).json({ message: "acceso no autorizado, por falta de datos" });
+                    return;
+                }
+                const cod = Math.floor(Math.random() * 1000000).toString();
+                const updateCod = this.userModel.updateUser({ resetCod: cod }, id);
+                //enviar el cod por msg
+            }
+            catch (error) {
+                console.log(error);
+                res.status(500).json({ message: error });
+            }
+        };
+        //el usuario envia codigo
+        this.validationToken = async (req, res) => {
+            const { cod } = req.params;
+            try {
+                const response = await this.userModel.getByToken(cod);
                 if (!response) {
                     res.status(404).json({ message: "Usuario no encontrado" });
                     return;

@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
 import { SECRET_KEY } from "../config.js";
 
-export function generarToken(userData: Object) {
+export function generarToken(userData: Object | string, time = "24h") {
   if (SECRET_KEY) {
     const token = jwt.sign(userData, SECRET_KEY, {
-      expiresIn: "24h"
+      expiresIn: time
     })
     return token
   }

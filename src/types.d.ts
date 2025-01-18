@@ -4,8 +4,9 @@ export interface User {
   password: string,
   email: string,
   avatar: string,
-  phone?: number | null,
+  phone: string | null,
   resetToken?: string | null,
+  resetCod  ?: number | null,
   rebootAttempts: number
   resetTokenExpires?: Date | null,
   isActive: boolean,

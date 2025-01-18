@@ -14,7 +14,9 @@ export const createUsersRouter = ({ UserModel }: IUserClass) => {
   userRouter.delete('/:id', usersController.deleteUser.bind(usersController))
   userRouter.get('/reactive', usersController.reactiveUser.bind(usersController))
   userRouter.post('/resetLogin', usersController.resetLogin.bind(usersController))
- return userRouter
+  userRouter.get('/?token', usersController.authentication.bind(usersController))
+  userRouter.get('/?cod', usersController.validationToken.bind(usersController))
+  return userRouter
 }
 
 /* 

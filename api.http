@@ -12,31 +12,22 @@ Content-Type: application/json
 
 GET http://localhost:1234/users
 
-### change password
+### update
 
 PUT http://localhost:1234/users/af0be6fd-184e-4185-aa48-0f6f4a7c8fed
 Content-Type: application/json
 
 {
-  "email":"juanfher.255@gmail.com"
+  "phone": "59204237"
 }
 
 ### login
-POST  http://localhost:1234/users/login
+POST  http://localhost:1234/verification/login
 Content-Type:  application/json
 
 {
   "user":"xjf_255",
-  "password": "pruebasUni4@"
-}
-
-### login
-POST  http://localhost:1234/users/login
-Content-Type:  application/json
-
-{
-  "user":"@dmin",
-  "password": "juanfher1."
+  "password": "Juanfher1!"
 }
 
 ### reset login
