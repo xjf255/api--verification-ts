@@ -1,27 +1,14 @@
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js";
-import { generarToken, getInfoToToken } from "../utils/generateToken.js";
+import { generarToken } from "../utils/generateToken.js";
 import { hashPassword } from "../utils/hashPassword.js";
 import { deleteImage, loaderImage } from "../services/cloudMethods.js";
 import { sendMail } from "../services/sendMail.js";
 import ejs from "ejs";
 import path from "path";
 import getDirname from "../utils/dirname.js";
+import { sendSMS } from "../services/sendSMS.js";
 export class UsersController {
     constructor({ UserModel }) {
-        this.getAll = async (req, res) => {
-            try {
-                const data = await this.userModel.getAll();
-                if (data.length === 0) {
-                    res.status(404).json({ message: "Sin existencias" });
-                    return;
-                }
-                res.status(200).json(data);
-            }
-            catch (error) {
-                console.error("Error al obtener los usuarios:", error);
-                res.status(500).json({ message: "Error interno del servidor" });
-            }
-        };
         this.createUser = async (req, res) => {
             try {
                 const file = req.file;
@@ -60,7 +47,7 @@ export class UsersController {
         };
         this.updateUser = async (req, res) => {
             try {
-                const { id } = req.params;
+                const id = req?.user?.id || req?.params?.id;
                 if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
                     res.status(400).json({ message: "ID inválido" });
                     return;
@@ -110,7 +97,7 @@ export class UsersController {
             }
         };
         this.deleteUser = async (req, res) => {
-            const { id } = req.params;
+            const { id } = req.params ?? req?.user;
             if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
                 res.status(400).json({ message: "ID inválido" });
                 return;
@@ -125,9 +112,7 @@ export class UsersController {
             }
         };
         this.reactiveUser = async (req, res) => {
-            const token = req.cookies.reactive;
-            const id = getInfoToToken(token);
-            console.log(id);
+            const id = req?.user?.id;
             if (!id || !/^[0-9a-fA-F-]{36}$/.test(id.toString())) {
                 res.status(400).json({ message: "ID inválido" });
                 return;
@@ -215,9 +200,10 @@ export class UsersController {
                     res.status(404).json({ message: "acceso no autorizado, por falta de datos" });
                     return;
                 }
-                const cod = Math.floor(Math.random() * 1000000).toString();
-                const updateCod = this.userModel.updateUser({ resetCod: cod }, id);
+                const code = Math.floor(Math.random() * 1000000);
+                const updateCod = this.userModel.updateUser({ resetCod: code }, id);
                 //enviar el cod por msg
+                await sendSMS({ phoneNumber: phone, code });
             }
             catch (error) {
                 console.log(error);

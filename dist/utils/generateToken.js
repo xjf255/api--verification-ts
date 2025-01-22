@@ -10,6 +10,6 @@ export function generarToken(userData, time = "24h") {
 }
 export function getInfoToToken(token) {
     if (!token || SECRET_KEY === undefined)
-        return;
+        return '';
     return jwt.verify(token, SECRET_KEY);
 }

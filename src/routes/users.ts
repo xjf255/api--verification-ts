@@ -8,7 +8,6 @@ const upload = multer({ storage });
 export const createUsersRouter = ({ UserModel }: IUserClass) => {
   const userRouter = Router()
   const usersController = new UsersController({ UserModel })
-  userRouter.get('/', usersController.getAll.bind(usersController))
   userRouter.post('/', upload.single('avatar'), usersController.createUser.bind(usersController))
   userRouter.put('/:id', upload.single('avatar'), usersController.updateUser.bind(usersController))
   userRouter.delete('/:id', usersController.deleteUser.bind(usersController))

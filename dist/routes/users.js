@@ -6,12 +6,13 @@ const upload = multer({ storage });
 export const createUsersRouter = ({ UserModel }) => {
     const userRouter = Router();
     const usersController = new UsersController({ UserModel });
-    userRouter.get('/', usersController.getAll.bind(usersController));
     userRouter.post('/', upload.single('avatar'), usersController.createUser.bind(usersController));
     userRouter.put('/:id', upload.single('avatar'), usersController.updateUser.bind(usersController));
     userRouter.delete('/:id', usersController.deleteUser.bind(usersController));
     userRouter.get('/reactive', usersController.reactiveUser.bind(usersController));
     userRouter.post('/resetLogin', usersController.resetLogin.bind(usersController));
+    userRouter.get('/?token', usersController.authentication.bind(usersController));
+    userRouter.get('/?cod', usersController.validationToken.bind(usersController));
     return userRouter;
 };
 /*

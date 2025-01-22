@@ -21,7 +21,7 @@ export class VerificationController {
                 }
                 if (!userData.isActive) {
                     res.status(403).json({ message: "Usuario inactivo" });
-                    res.cookie("reactive", userData.id, {
+                    res.cookie("reactive", { id: userData.id }, {
                         httpOnly: true,
                         sameSite: "strict"
                     });
@@ -43,8 +43,8 @@ export class VerificationController {
             }
         };
         this.protected = (req, res) => {
-            const token = req.cookies.access_token;
-            if (!token) {
+            const token = req.cookies?.access_token ?? '';
+            if (!token || token === '') {
                 return res.status(403).json({ error: "Access denied. No token provided." });
             }
             try {

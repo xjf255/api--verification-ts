@@ -5,6 +5,7 @@ import { createUsersRouter } from './routes/users.js'
 import { IUserClass, IUserModel } from './types.js'
 import rateLimit from 'express-rate-limit'
 import { createVerificationRouter } from './routes/verification.js'
+import { authenticateUser } from './middleware/authenticateUser.js'
 
 export const createApp = ({ UserModel }: IUserClass) => {
   const app = express()
@@ -16,6 +17,7 @@ export const createApp = ({ UserModel }: IUserClass) => {
   })
   app.use(limiter)
   app.use(cookieParser())
+  app.use(authenticateUser)
   app.use(json())
   app.use(corsMiddleware())
   app.disable('x-powered-by')

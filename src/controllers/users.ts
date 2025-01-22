@@ -8,24 +8,12 @@ import { CleanUser, IUserClass } from "../types.js"
 import ejs from "ejs"
 import path from "path"
 import getDirname from "../utils/dirname.js"
+import { sendSMS } from "../services/sendSMS.js"
 export class UsersController {
   private userModel
 
   constructor({ UserModel }: IUserClass) {
     this.userModel = UserModel
-  }
-  getAll = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const data = await this.userModel.getAll()
-      if (data.length === 0) {
-        res.status(404).json({ message: "Sin existencias" })
-        return
-      }
-      res.status(200).json(data)
-    } catch (error) {
-      console.error("Error al obtener los usuarios:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
-    }
   }
 
   createUser = async (req: Request, res: Response): Promise<void> => {
@@ -66,7 +54,7 @@ export class UsersController {
 
   updateUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { id } = req.params
+      const id = req?.user?.id || req?.params?.id
 
       if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
         res.status(400).json({ message: "ID inválido" })
@@ -123,7 +111,7 @@ export class UsersController {
   }
 
   deleteUser = async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params
+    const { id } = req.params ?? req?.user
     if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
       res.status(400).json({ message: "ID inválido" })
       return
@@ -139,9 +127,7 @@ export class UsersController {
   }
 
   reactiveUser = async (req: Request, res: Response): Promise<any> => {
-    const token = req.cookies.reactive
-    const id = getInfoToToken(token)
-    console.log(id)
+    const id = req?.user?.id
     if (!id || !/^[0-9a-fA-F-]{36}$/.test(id.toString())) {
       res.status(400).json({ message: "ID inválido" })
       return
@@ -232,9 +218,10 @@ export class UsersController {
         res.status(404).json({ message: "acceso no autorizado, por falta de datos" })
         return
       }
-      const cod = Math.floor(Math.random() * 1000000).toString()
-      const updateCod = this.userModel.updateUser({ resetCod: cod }, id)
+      const code = Math.floor(Math.random() * 1000000)
+      const updateCod = this.userModel.updateUser({ resetCod: code }, id)
       //enviar el cod por msg
+      await sendSMS({ phoneNumber: phone, code })
     } catch (error) {
       console.log(error)
       res.status(500).json({ message: error })

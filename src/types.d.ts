@@ -6,7 +6,7 @@ export interface User {
   avatar: string,
   phone: string | null,
   resetToken?: string | null,
-  resetCod  ?: number | null,
+  resetCod?: number | null,
   rebootAttempts: number
   resetTokenExpires?: Date | null,
   isActive: boolean,
@@ -19,7 +19,6 @@ export type ValidateToReset = Pick<User, "email", "user">
 export type CreatedUser = Omit<User, "created_at", "updatedAt", "isActive">
 
 interface IUserModel {
-  getAll: () => Promise<CleanUser[]>
   getById: (id: string) => Promise<CleanUser | null>
   create: (user: CreatedUser) => Promise<CleanUser>
   updateUser: (userToUpdate: any, id: string) => Promise<boolean>

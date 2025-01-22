@@ -5,7 +5,7 @@ import { generarToken, getInfoToToken } from "../utils/generateToken.js"
 export class VerificationController {
   private userModel
 
-  constructor({UserModel} :any){
+  constructor({ UserModel }: any) {
     this.userModel = UserModel
   }
 
@@ -29,7 +29,7 @@ export class VerificationController {
 
       if (!userData.isActive) {
         res.status(403).json({ message: "Usuario inactivo" })
-        res.cookie("reactive", userData.id, {
+        res.cookie("reactive", {id:userData.id}, {
           httpOnly: true,
           sameSite: "strict"
         })
@@ -53,8 +53,8 @@ export class VerificationController {
   }
 
   protected = (req: Request, res: Response): any => {
-    const token = req.cookies.access_token
-    if (!token) {
+    const token = req.cookies?.access_token ?? ''
+    if (!token || token === '') {
       return res.status(403).json({ error: "Access denied. No token provided." })
     }
 
