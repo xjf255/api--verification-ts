@@ -219,9 +219,15 @@ export class UsersController {
         return
       }
       const code = Math.floor(Math.random() * 1000000)
-      const updateCod = this.userModel.updateUser({ resetCod: code }, id)
+      const updateCod = await this.userModel.updateUser({ resetCod: code }, id)
       //enviar el cod por msg
-      await sendSMS({ phoneNumber: phone, code })
+      if (updateCod) {
+        await sendSMS({ phoneNumber: phone, code })
+        res.json({ message: 'Codigo enviado' })
+        return
+      }
+
+      res.status(401).json({ message: 'no se pudo en enviar el codigo' })
     } catch (error) {
       console.log(error)
       res.status(500).json({ message: error })
