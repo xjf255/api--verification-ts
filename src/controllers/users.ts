@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
 import { generarToken, getInfoToToken } from "../utils/generateToken.js"
-import { hashPassword } from "../utils/hashPassword.js"
+import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../services/cloudMethods.js"
 import { sendMail } from "../services/sendMail.js"
 import { CleanUser, IUserClass } from "../types.js"
@@ -9,6 +9,7 @@ import ejs from "ejs"
 import path from "path"
 import getDirname from "../utils/dirname.js"
 import { sendSMS } from "../services/sendSMS.js"
+import { InsertUser } from "../schemas/db.js"
 export class UsersController {
   private userModel
 
@@ -28,13 +29,14 @@ export class UsersController {
         return
       }
 
-      const userData = await this.userModel.create(user.data)
+      const userData = await this.userModel.createUser(user.data)
       const token = generarToken(userData)
 
       res.status(201)
         .cookie("access_token", token, {
           httpOnly: true,
-          sameSite: "strict"
+          sameSite: "strict",
+          maxAge: 1000 * 60 * 60
         })
         .json(userData)
     } catch (error: any) {
@@ -83,17 +85,16 @@ export class UsersController {
         res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) })
         return
       }
-      const { password, ...otherData } = updatedUserInfo.data
 
-      const validData = Object.fromEntries(
+      const { password, ...otherData } = updatedUserInfo.data
+      let userToUpdate = Object.fromEntries(
         Object.entries({ ...otherData, password })
-          .filter(([_, value]) => value != null)
+          .filter((_, value) => value !== null)
       )
 
-      let userToUpdate = validData
       if (password) {
-        const userUpdated = await hashPassword(validData)
-        userToUpdate = userUpdated
+        const userUpdated = await hashPassword(password)
+        userToUpdate = { ...otherData, password: userUpdated }
       }
 
       const isUpdated = await this.userModel.updateUser(userToUpdate, id)
@@ -219,6 +220,7 @@ export class UsersController {
         return
       }
       const code = Math.floor(Math.random() * 1000000)
+      const hashedCode = await hashCode(code.toString())
       const updateCod = await this.userModel.updateUser({ resetCod: code }, id)
       //enviar el cod por msg
       if (updateCod) {
@@ -237,12 +239,35 @@ export class UsersController {
   validationToken = async (req: Request, res: Response): Promise<any> => {
     const { cod } = req.params
     try {
-      const response = await this.userModel.getByToken(cod)
-      if (!response) {
+      const info = await this.userModel.getByToken(cod)
+      const { id } = info as CleanUser
+      if (!info || !id) {
         res.status(404).json({ message: "Usuario no encontrado" })
         return
       }
-      res.json({ message: "Código válido" })
+      const accessToken = generarToken(info)
+      const refreshToken = generarToken(info, '7d')
+
+      const newSession = {
+        userId: id,
+        accessToken: await hashCode(accessToken ?? ""),
+        refreshToken: await hashCode(refreshToken ?? ""),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
+      }
+      const session = await this.userModel.createSession(newSession)
+      res
+        .cookie("access_token", session.accessToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          secure: true,
+          maxAge: 1000 * 60 * 60
+        })
+        .cookie("refresh_token", session.refreshToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          maxAge: 1000 * 60 * 60 * 24 * 7
+        })
+        .json({ message: "Código válido" })
     } catch (error) {
       console.error("Error al verificar el código:", error)
       res.status(500).json({ message: "Error interno del servidor" })
