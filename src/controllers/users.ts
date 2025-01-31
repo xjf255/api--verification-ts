@@ -1,4 +1,4 @@
-import { Request, Response } from "express"
+import { request, Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
 import { generarToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
@@ -9,7 +9,7 @@ import ejs from "ejs"
 import path from "path"
 import getDirname from "../utils/dirname.js"
 import { sendSMS } from "../services/sendSMS.js"
-import { strict } from "assert"
+import { isValidUUID } from "../utils/validatedUUID.js"
 export class UsersController {
   private userModel
 
@@ -58,26 +58,13 @@ export class UsersController {
     try {
       const id = req?.user?.id || req?.params?.id
 
-      if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+      if (!isValidUUID(id)) {
         res.status(400).json({ message: "ID inválido" })
         return
       }
 
-      const file = req.file
-      if (file) {
-        req.body.avatar = await loaderImage({ file })
-        const data = await this.userModel.getById(id)
-        if (!data) {
-          res.status(404).json({ message: "usuario no existente" })
-          return
-        }
-        const { avatar } = data
-        if (avatar && avatar !== "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp") {
-          const res = await deleteImage(avatar)
-          if (res.error) {
-            console.error("Error al eliminar la imagen:", res.error)
-          }
-        }
+      if (req.file) {
+        await this.handleAvatarUpdate(req, id)
       }
 
       const updatedUserInfo = validatedPartialUsers(req.body)
@@ -86,34 +73,62 @@ export class UsersController {
         return
       }
 
-      const { password, ...otherData } = updatedUserInfo.data
-      let userToUpdate = Object.fromEntries(
-        Object.entries({ ...otherData, password })
-          .filter((_, value) => value !== null)
-      )
+      const { password, ...otherData } = updatedUserInfo.data as { password?: string } & Record<string, any>
 
       if (password) {
-        const userUpdated = await hashPassword(password)
-        userToUpdate = { ...otherData, password: userUpdated }
+        otherData.password = await hashPassword(password)
       }
+
+      const userToUpdate = Object.fromEntries(
+        Object.entries(otherData).filter(([_, value]) => value !== null)
+      )
 
       const isUpdated = await this.userModel.updateUser(userToUpdate, id)
       if (!isUpdated) {
         throw new Error("Usuario no encontrado")
       }
-      res.json({ message: "Usuario actualizado Correctamente" })
+
+      res.json({ message: "Usuario actualizado correctamente" })
     } catch (error: any) {
       if (error.code === "23505") {
-        res.status(409).json({ message: "El usuario o correo no valido" })
+        res.status(409).json({ message: "El usuario o correo no válido" })
       } else {
+        console.error("Error al actualizar usuario:", error)
         res.status(500).json({ message: "Error interno del servidor" })
       }
     }
   }
 
+  private handleAvatarUpdate = async (req: Request, userId: string) => {
+    try {
+      const newAvatarUrl = await loaderImage({ file: req.file! })
+      const userData = await this.userModel.getById(userId)
+
+      if (!userData) {
+        throw new Error("Usuario no existente")
+      }
+
+      const { avatar } = userData
+      const isDefaultAvatar =
+        avatar === "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp"
+
+      if (avatar && !isDefaultAvatar) {
+        const deleteResponse = await deleteImage(avatar)
+        if (deleteResponse.error) {
+          console.error("Error al eliminar la imagen:", deleteResponse.error)
+        }
+      }
+
+      req.body.avatar = newAvatarUrl
+    } catch (error) {
+      console.error("Error al actualizar avatar:", error)
+      throw new Error("Error al manejar la imagen de perfil")
+    }
+  }
+
   deleteUser = async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params ?? req?.user
-    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+    if (!isValidUUID(id)) {
       res.status(400).json({ message: "ID inválido" })
       return
     }
@@ -129,7 +144,7 @@ export class UsersController {
 
   reactiveUser = async (req: Request, res: Response): Promise<any> => {
     const id = req?.user?.id
-    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id.toString())) {
+    if (!id || !isValidUUID(id)) {
       res.status(400).json({ message: "ID inválido" })
       return
     }
@@ -219,8 +234,8 @@ export class UsersController {
         res.status(404).json({ message: "acceso no autorizado, por falta de datos" })
         return
       }
-      const code = Math.floor(Math.random() * 1000000)
-      const hashedCode = await hashCode(code.toString())
+      const code = String(Math.floor(100000 + Math.random() * 900000)) // Código de 6 dígitos
+      const hashedCode = await hashCode(code)
       const { id: verificationId } = await this.userModel.updateVerification({ resetCode: hashedCode }, id)
       //enviar el cod por msg
       if (verificationId) {
@@ -247,12 +262,12 @@ export class UsersController {
     const { cod } = req.params
     const verificationToken = req.cookies?.verification
     try {
-      const info = await this.userModel.verification(verificationToken, cod)
-      const { id } = info as CleanUser
-      if (!info || !id) {
+      const info = await this.userModel.verification(verificationToken, cod) as CleanUser
+      if (!info || !info.id) {
         res.status(404).json({ message: "Usuario no encontrado" })
         return
       }
+      const { id } = info
       const accessToken = generarToken(info)
       const refreshToken = generarToken(info, '7d')
 

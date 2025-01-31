@@ -10,7 +10,7 @@ interface Props {
 
 interface SMSProps {
   phoneNumber: string,
-  code: number
+  code: string
 }
 
 const auth = new Auth({

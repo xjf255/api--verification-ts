@@ -26,11 +26,11 @@ export const sessionsTable = pgTable('sessions', {
 export const verificationsTable = pgTable('verifications', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }).unique(),
-  resetToken: text('reset_token'), // Token para recuperación de contraseña
+  resetToken: text('reset_token').unique(), // Token para recuperación de contraseña
   resetCode: text('reset_code'), // Código para 2FA
   resetTokenExpires: timestamp('reset_token_expires'), // Expiración del token
   rebootAttempts: integer('reboot_attempts').default(3).notNull(), // Intentos restantes para 2FA
-  createdAt: timestamp('crusersTableeated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().$onUpdate(() => new Date()),
 })
 

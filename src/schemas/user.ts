@@ -1,5 +1,6 @@
 import z from 'zod'
-import { CreatedUser, ValidateToReset } from '../types.js'
+import { ValidateToReset } from '../types.js'
+import { InsertUser } from './db.js'
 
 const schemaUsers = z.object({
   "user": z.string().max(8, "El usuario puede tener un maximo de 8 caracteres").nullable(),
@@ -16,11 +17,11 @@ const schemaUsers = z.object({
     .regex(/^\d+$/, "El número de teléfono solo puede contener dígitos."),
 })
 
-export function validatedUsers(object: CreatedUser) {
+export function validatedUsers(object: InsertUser) {
   return schemaUsers.safeParse(object)
 }
 
-export function validatedPartialUsers(object: Partial<CreatedUser>) {
+export function validatedPartialUsers(object: Partial<InsertUser>) {
   return schemaUsers.partial().safeParse(object)
 }
 
