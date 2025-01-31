@@ -30,7 +30,7 @@ export const verificationsTable = pgTable('verifications', {
   resetCode: text('reset_code'), // Código para 2FA
   resetTokenExpires: timestamp('reset_token_expires'), // Expiración del token
   rebootAttempts: integer('reboot_attempts').default(3).notNull(), // Intentos restantes para 2FA
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp('crusersTableeated_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().$onUpdate(() => new Date()),
 })
 

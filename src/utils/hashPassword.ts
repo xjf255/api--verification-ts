@@ -10,7 +10,7 @@ interface Props {
   hashedInput: string
 }
 
-export async function comparePassword({ input, hashedInput }: Props) {
+export async function comparePassword({ input, hashedInput }: Props): Promise<boolean> {
   return await bcrypt.compare(input, hashedInput)
 }
 

@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
-import { generarToken, getInfoToToken } from "../utils/generateToken.js"
+import { generarToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../services/cloudMethods.js"
 import { sendMail } from "../services/sendMail.js"
@@ -9,7 +9,7 @@ import ejs from "ejs"
 import path from "path"
 import getDirname from "../utils/dirname.js"
 import { sendSMS } from "../services/sendSMS.js"
-import { InsertUser } from "../schemas/db.js"
+import { strict } from "assert"
 export class UsersController {
   private userModel
 
@@ -159,20 +159,17 @@ export class UsersController {
         res.status(404).json({ message: 'no ingreso ningun valor para buscar el usuario' })
         return
       }
-      const userData = await this.userModel.getByInfo(valueOfUser)
+      //busca el usuario por email o user
+      const userData = await this.userModel.getAllInfo(valueOfUser)
       if (!userData) {
         res.status(404).json({ message: "Usuario no encontrado" })
         return
       }
-      const { id, user: userName, email: addressee, rebootAttempts } = userData as CleanUser
-      if (rebootAttempts === 0 || !id) {
-        res.status(401).json({ message: "Intentalo más tarde" })
-        return
-      }
+      const { id, user: userName, email: addressee } = userData as CleanUser
 
       const time = new Date(Date.now() + 5 * 60 * 1000)
       const token = generarToken({ codigo: Math.floor(Math.random() * 1000000).toString() }, "5m")
-      const data = { resetTokenExpires: time, rebootAttempts: rebootAttempts - 1, resetToken: token }
+      const data = { userId: id, resetTokenExpires: time, resetToken: token }
       const templatePath = path.join(getDirname(), "../view/user/templateMail.ejs")
       const templateData = { name: userName, url: token }
 
@@ -187,7 +184,8 @@ export class UsersController {
           // Enviar el correo
           const messageId = await sendMail({ addressee, data: html })
           console.log("Correo enviado con ID:", messageId)
-          const isUpdated = await this.userModel.updateUser(data, id)
+          // Actualiza la informacion del usuario
+          const isUpdated = await this.userModel.verificationAttempts(data)
           if (!isUpdated) {
             res.status(500).json({ message: "Error al actualizar los datos del usuario" })
             return
@@ -208,8 +206,10 @@ export class UsersController {
   //'/two_factor?token=fslkfjasl' 
   authentication = async (req: Request, res: Response): Promise<any> => {
     try {
+      // obtengo el token de la URL
       const { token } = req.params
-      const infoUser = await this.userModel.getByToken(token)
+      // busco el usuario por el token
+      const infoUser = await this.userModel.searchUserByToken(token)
       if (!infoUser) {
         res.status(404).json({ message: "no se encontro el usuario" })
         return
@@ -221,11 +221,18 @@ export class UsersController {
       }
       const code = Math.floor(Math.random() * 1000000)
       const hashedCode = await hashCode(code.toString())
-      const updateCod = await this.userModel.updateUser({ resetCod: code }, id)
+      const { id: verificationId } = await this.userModel.updateVerification({ resetCode: hashedCode }, id)
       //enviar el cod por msg
-      if (updateCod) {
+      if (verificationId) {
+        const verificationIdToken = generarToken({ verificationId }, "5m")
         await sendSMS({ phoneNumber: phone, code })
-        res.json({ message: 'Codigo enviado' })
+        res.status(200)
+          .cookie("verification", verificationIdToken, {
+            httpOnly: true,
+            sameSite: "strict",
+            maxAge: 1000 * 60 * 5,
+          })
+          .json({ message: 'Codigo enviado' })
         return
       }
 
@@ -238,8 +245,9 @@ export class UsersController {
   //el usuario envia codigo
   validationToken = async (req: Request, res: Response): Promise<any> => {
     const { cod } = req.params
+    const verificationToken = req.cookies?.verification
     try {
-      const info = await this.userModel.getByToken(cod)
+      const info = await this.userModel.verification(verificationToken, cod)
       const { id } = info as CleanUser
       if (!info || !id) {
         res.status(404).json({ message: "Usuario no encontrado" })
@@ -250,8 +258,8 @@ export class UsersController {
 
       const newSession = {
         userId: id,
-        accessToken: await hashCode(accessToken ?? ""),
-        refreshToken: await hashCode(refreshToken ?? ""),
+        accessToken: accessToken ?? "",
+        refreshToken: refreshToken ?? "",
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
       }
       const session = await this.userModel.createSession(newSession)
