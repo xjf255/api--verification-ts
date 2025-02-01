@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { SECRET_KEY } from "../config.js";
-export function generarToken(userData, time = "1h") {
+export function generarToken(userData, time = "1d") {
     if (SECRET_KEY) {
         const token = jwt.sign(userData, SECRET_KEY, {
             expiresIn: time
@@ -9,7 +9,13 @@ export function generarToken(userData, time = "1h") {
     }
 }
 export function getInfoToToken(token) {
-    if (!token || SECRET_KEY === undefined)
+    if (!token || !SECRET_KEY)
         return '';
-    return jwt.verify(token, SECRET_KEY);
+    try {
+        return jwt.verify(token, SECRET_KEY);
+    }
+    catch (error) {
+        console.error("Error verifying token:", error);
+        return '';
+    }
 }

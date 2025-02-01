@@ -6,32 +6,36 @@ export class VerificationController {
             try {
                 const dataUser = validatedPartialUsers(req.body);
                 if (dataUser.error) {
-                    res.status(400).json({ message: JSON.parse(dataUser.error.message) });
-                    return;
+                    return res.status(400).json({ message: JSON.parse(dataUser.error.message) });
                 }
                 const { password, user, email } = dataUser.data;
                 if (!password || !(user || email)) {
-                    res.status(400).json({ message: "Faltan datos" });
-                    return;
+                    return res.status(400).json({ message: "Faltan datos" });
                 }
                 const userData = await this.userModel.login({ user, email, password });
                 if (!userData) {
-                    res.status(404).json({ message: "Credenciales inválidas" });
-                    return;
+                    return res.status(404).json({ message: "Credenciales inválidas" });
                 }
                 if (!userData.isActive) {
-                    res.status(403).json({ message: "Usuario inactivo" });
-                    res.cookie("reactive", { id: userData.id }, {
+                    return res.status(403).cookie("reactive", { id: userData.id }, {
                         httpOnly: true,
                         sameSite: "strict"
-                    });
+                    }).json({ message: "Usuario inactivo" });
                 }
                 const token = generarToken(userData);
+                const refreshToken = generarToken(userData, "1y");
                 res
                     .cookie("access_token", token, {
                     httpOnly: true,
-                    sameSite: "strict"
-                }).json({
+                    sameSite: "strict",
+                    maxAge: 60 * 60 * 24
+                })
+                    .cookie("refresh_token", refreshToken, {
+                    httpOnly: true,
+                    sameSite: "strict",
+                    maxAge: 60 * 60 * 24 * 365
+                })
+                    .json({
                     message: "Inicio de sesión exitoso",
                     user: userData,
                     token,
@@ -42,10 +46,34 @@ export class VerificationController {
                 res.status(500).json({ message: "Error interno del servidor" });
             }
         };
-        this.protected = (req, res) => {
-            const token = req.cookies?.access_token ?? '';
-            if (!token || token === '') {
+        this.protected = async (req, res) => {
+            const token = req.cookies?.access_token ?? "";
+            const refreshToken = req.cookies?.refresh_token ?? "";
+            if (!token || !refreshToken) {
                 return res.status(403).json({ error: "Access denied. No token provided." });
+            }
+            const refreshTokenInfo = getInfoToToken(refreshToken);
+            const accessTokenInfo = getInfoToToken(token);
+            if (typeof refreshTokenInfo !== "object" || typeof accessTokenInfo !== "object") {
+                return res.status(403).json({ error: "Access denied. Invalid token." });
+            }
+            const { exp: expRefreshToken } = refreshTokenInfo;
+            const { exp: expAccessToken } = accessTokenInfo;
+            if (!expRefreshToken || Date.now() >= expRefreshToken * 1000) {
+                return res.status(403)
+                    .clearCookie("access_token")
+                    .clearCookie("refresh_token")
+                    .json({ error: "Access denied. Token expired." });
+            }
+            if (!expAccessToken || Date.now() >= expAccessToken * 1000) {
+                const infoUser = refreshTokenInfo;
+                const newToken = generarToken(infoUser);
+                const updateVerification = await this.userModel.updateVerification({ token: newToken }, infoUser.id);
+                return res.cookie("access_token", newToken, {
+                    httpOnly: true,
+                    sameSite: "strict",
+                    maxAge: 60 * 60 * 24
+                }).json(infoUser);
             }
             try {
                 const userInfo = getInfoToToken(token);
@@ -56,8 +84,10 @@ export class VerificationController {
                 res.status(401).json({ error: "Invalid token." });
             }
         };
-        this.logout = (req, res) => {
-            res.clearCookie("access_token").json({ message: "Logout exitoso" });
+        this.logout = async (req, res) => {
+            return res.clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
+                .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })
+                .json({ message: "Logout exitoso" });
         };
         this.userModel = UserModel;
     }
