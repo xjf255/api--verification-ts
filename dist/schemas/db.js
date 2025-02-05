@@ -15,8 +15,8 @@ export const usersTable = pgTable('users', {
 export const sessionsTable = pgTable('sessions', {
     id: integer('id').notNull().primaryKey().generatedByDefaultAsIdentity(),
     userId: uuid('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
-    accessToken: text('access_token').notNull(),
-    refreshToken: text('refresh_token').notNull(),
+    accessToken: text('access_token').notNull().unique(),
+    refreshToken: text('refresh_token').notNull().unique(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     expiresAt: timestamp('expires_at').notNull(), // Fecha de expiración del token
 });

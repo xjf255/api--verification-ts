@@ -8,6 +8,7 @@ import path from "path";
 import getDirname from "../utils/dirname.js";
 import { sendSMS } from "../services/sendSMS.js";
 import { isValidUUID } from "../utils/validatedUUID.js";
+import { hrInMs } from "../utils/constant.js";
 export class UsersController {
     constructor({ UserModel }) {
         this.createUser = async (req, res) => {
@@ -16,18 +17,39 @@ export class UsersController {
                 if (file) {
                     req.body.avatar = await loaderImage({ file });
                 }
+                else {
+                    req.body.avatar = 'https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp';
+                }
+                console.log(req.body);
                 const user = validatedUsers(req.body);
                 if (user.error) {
                     res.status(400).json({ message: JSON.parse(user.error.message) });
                     return;
                 }
                 const userData = await this.userModel.createUser(user.data);
-                const token = generarToken(userData);
+                console.log(userData);
+                const accessToken = generarToken(userData);
+                const refreshToken = generarToken(userData, "7d");
+                if (!accessToken || !refreshToken) {
+                    res.status(403).json({ message: "Error al generar token" });
+                    return;
+                }
+                await this.userModel.createSession({
+                    userId: userData.id,
+                    accessToken,
+                    refreshToken,
+                    expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
+                });
                 res.status(201)
-                    .cookie("access_token", token, {
+                    .cookie("access_token", accessToken, {
                     httpOnly: true,
                     sameSite: "strict",
-                    maxAge: 1000 * 60 * 60
+                    expires: new Date(Date.now() + hrInMs)
+                })
+                    .cookie("refresh_token", refreshToken, {
+                    httpOnly: true,
+                    sameSite: "strict",
+                    expires: new Date(Date.now() + hrInMs * 24 * 7)
                 })
                     .json(userData);
             }
@@ -57,7 +79,7 @@ export class UsersController {
                 if (req.file) {
                     await this.handleAvatarUpdate(req, id);
                 }
-                const updatedUserInfo = validatedPartialUsers(req.body);
+                const updatedUserInfo = validatedPartialUsers({ ...req.body });
                 if (updatedUserInfo.error) {
                     res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) });
                     return;
@@ -220,7 +242,7 @@ export class UsersController {
                         .cookie("verification", verificationIdToken, {
                         httpOnly: true,
                         sameSite: "strict",
-                        maxAge: 1000 * 60 * 5,
+                        expires: new Date(Date.now() + 1000 * 60 * 5)
                     })
                         .json({ message: 'Codigo enviado' });
                     return;
@@ -249,7 +271,7 @@ export class UsersController {
                     userId: id,
                     accessToken: accessToken ?? "",
                     refreshToken: refreshToken ?? "",
-                    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
+                    expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
                 };
                 const session = await this.userModel.createSession(newSession);
                 res
@@ -257,12 +279,12 @@ export class UsersController {
                     httpOnly: true,
                     sameSite: "strict",
                     secure: true,
-                    maxAge: 1000 * 60 * 60
+                    expires: new Date(Date.now() + hrInMs)
                 })
                     .cookie("refresh_token", session.refreshToken, {
                     httpOnly: true,
                     sameSite: "strict",
-                    maxAge: 1000 * 60 * 60 * 24 * 7
+                    expires: new Date(Date.now() + hrInMs * 24 * 7)
                 })
                     .json({ message: "Código válido" });
             }

@@ -1,10 +1,11 @@
 import { validatedPartialUsers } from "../schemas/user.js";
 import { generarToken, getInfoToToken } from "../utils/generateToken.js";
+import { hrInMs } from "../utils/constant.js";
 export class VerificationController {
     constructor({ UserModel }) {
         this.login = async (req, res) => {
             try {
-                const dataUser = validatedPartialUsers(req.body);
+                const dataUser = validatedPartialUsers({ ...req.body });
                 if (dataUser.error) {
                     return res.status(400).json({ message: JSON.parse(dataUser.error.message) });
                 }
@@ -19,21 +20,31 @@ export class VerificationController {
                 if (!userData.isActive) {
                     return res.status(403).cookie("reactive", { id: userData.id }, {
                         httpOnly: true,
-                        sameSite: "strict"
+                        sameSite: "strict",
+                        expires: new Date(Date.now() + hrInMs)
                     }).json({ message: "Usuario inactivo" });
                 }
                 const token = generarToken(userData);
-                const refreshToken = generarToken(userData, "1y");
+                const refreshToken = generarToken(userData, "7d");
+                if (!token || !refreshToken) {
+                    return res.status(403).json({ message: "Error al generar token" });
+                }
+                await this.userModel.createSession({
+                    userId: userData.id,
+                    accessToken: token,
+                    refreshToken,
+                    expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
+                });
                 res
                     .cookie("access_token", token, {
                     httpOnly: true,
                     sameSite: "strict",
-                    maxAge: 60 * 60 * 24
+                    expires: new Date(Date.now() + hrInMs),
                 })
                     .cookie("refresh_token", refreshToken, {
                     httpOnly: true,
                     sameSite: "strict",
-                    maxAge: 60 * 60 * 24 * 365
+                    expires: new Date(Date.now() + hrInMs * 24 * 7),
                 })
                     .json({
                     message: "Inicio de sesión exitoso",
@@ -49,43 +60,55 @@ export class VerificationController {
         this.protected = async (req, res) => {
             const token = req.cookies?.access_token ?? "";
             const refreshToken = req.cookies?.refresh_token ?? "";
-            if (!token || !refreshToken) {
+            if (!refreshToken) {
                 return res.status(403).json({ error: "Access denied. No token provided." });
             }
-            const refreshTokenInfo = getInfoToToken(refreshToken);
-            const accessTokenInfo = getInfoToToken(token);
-            if (typeof refreshTokenInfo !== "object" || typeof accessTokenInfo !== "object") {
-                return res.status(403).json({ error: "Access denied. Invalid token." });
-            }
-            const { exp: expRefreshToken } = refreshTokenInfo;
-            const { exp: expAccessToken } = accessTokenInfo;
-            if (!expRefreshToken || Date.now() >= expRefreshToken * 1000) {
-                return res.status(403)
-                    .clearCookie("access_token")
-                    .clearCookie("refresh_token")
-                    .json({ error: "Access denied. Token expired." });
-            }
-            if (!expAccessToken || Date.now() >= expAccessToken * 1000) {
-                const infoUser = refreshTokenInfo;
-                const newToken = generarToken(infoUser);
-                const updateVerification = await this.userModel.updateVerification({ token: newToken }, infoUser.id);
-                return res.cookie("access_token", newToken, {
-                    httpOnly: true,
-                    sameSite: "strict",
-                    maxAge: 60 * 60 * 24
-                }).json(infoUser);
-            }
+            let refreshTokenInfo, accessTokenInfo;
             try {
-                const userInfo = getInfoToToken(token);
-                res.json(userInfo);
+                refreshTokenInfo = getInfoToToken(refreshToken);
+                accessTokenInfo = getInfoToToken(token);
+                if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
+                    throw new Error("Invalid token format");
+                }
+                const { exp: expRefreshToken } = refreshTokenInfo;
+                const { exp: expAccessToken } = accessTokenInfo;
+                if (!expRefreshToken || Date.now() >= expRefreshToken * 1000) {
+                    return res.status(403)
+                        .clearCookie("access_token")
+                        .clearCookie("refresh_token")
+                        .json({ error: "Session expired. Please log in again." });
+                }
+                if (!expAccessToken || Date.now() >= expAccessToken * 1000) {
+                    const infoUser = refreshTokenInfo;
+                    const newToken = generarToken(infoUser);
+                    try {
+                        const updateVerification = await this.userModel.updateSession({ accessToken: newToken }, infoUser.id);
+                        if (!updateVerification) {
+                            throw new Error("Failed to update session");
+                        }
+                    }
+                    catch (error) {
+                        return res.status(500).json({ error: "Server error. Try again later." });
+                    }
+                    return res.cookie("access_token", newToken, {
+                        httpOnly: true,
+                        sameSite: "strict",
+                        expires: new Date(Date.now() + hrInMs)
+                    }).json(infoUser);
+                }
+                return res.json(accessTokenInfo);
             }
             catch (error) {
-                console.error("Error decoding token:", error);
-                res.status(401).json({ error: "Invalid token." });
+                console.error("Token error:", error);
+                return res.status(403).json({ error: "Access denied. Invalid token." });
             }
         };
         this.logout = async (req, res) => {
-            return res.clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
+            const accessToken = req.cookies?.access_token ?? "";
+            const refreshToken = req.cookies?.refresh_token ?? "";
+            await this.userModel.removeSession(accessToken, refreshToken);
+            return res
+                .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
                 .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })
                 .json({ message: "Logout exitoso" });
         };
