@@ -1,5 +1,5 @@
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js";
-import { generarToken } from "../utils/generateToken.js";
+import { generarToken, getInfoToToken } from "../utils/generateToken.js";
 import { hashCode, hashPassword } from "../utils/hashPassword.js";
 import { deleteImage, loaderImage } from "../services/cloudMethods.js";
 import { sendMail } from "../services/sendMail.js";
@@ -67,7 +67,7 @@ export class UsersController {
                 }
             }
         };
-        this.updateUser = async (req, res) => {
+        this.updatedUser = async (req, res) => {
             try {
                 const id = req?.user?.id || req?.params?.id;
                 if (!isValidUUID(id)) {
@@ -76,8 +76,8 @@ export class UsersController {
                 if (req.file) {
                     await this.handleAvatarUpdate(req, id);
                 }
-                console.log(req.body);
-                const updatedUserInfo = validatedPartialUsers({ ...req.body });
+                console.log({ ...req.body });
+                const updatedUserInfo = validatedPartialUsers({ ...req.body, isActive: req.body.isActive === "true" });
                 console.log(updatedUserInfo);
                 if (updatedUserInfo.error) {
                     return res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) });
@@ -139,17 +139,53 @@ export class UsersController {
             }
         };
         this.reactiveUser = async (req, res) => {
-            const id = req?.user?.id;
-            if (!id || !isValidUUID(id)) {
-                return res.status(400).json({ message: "ID inválido" });
+            try {
+                const token = req.cookies?.reactive;
+                if (!token) {
+                    return res.status(400).json({ message: "Token no proporcionado" });
+                }
+                const reactiveToken = getInfoToToken(token);
+                if (!reactiveToken || !reactiveToken.id || !isValidUUID(reactiveToken.id)) {
+                    return res.status(400).json({ message: "ID inválido o token corrupto" });
+                }
+                const id = reactiveToken.id;
+                console.log('activar cuenta');
+                const info = await this.userModel.updateUser({ isActive: true }, id.toString());
+                if (!info || Object.keys(info).length === 0) {
+                    return res.status(404).json({ message: "Usuario no encontrado o no modificado" });
+                }
+                const accessToken = generarToken(info);
+                const refreshToken = generarToken(info, '7d');
+                const newSession = {
+                    userId: id,
+                    accessToken: accessToken ?? "",
+                    refreshToken: refreshToken ?? "",
+                    expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
+                };
+                const session = await this.userModel.createSession(newSession);
+                if (!session) {
+                    return res.status(500).json({ message: "Error al crear la sesión" });
+                }
+                return res
+                    .clearCookie("reactive")
+                    .cookie("access_token", session.accessToken, {
+                    httpOnly: true,
+                    sameSite: "strict",
+                    secure: true,
+                    expires: new Date(Date.now() + hrInMs)
+                })
+                    .cookie("refresh_token", session.refreshToken, {
+                    httpOnly: true,
+                    sameSite: "strict",
+                    expires: new Date(Date.now() + hrInMs * 24 * 7)
+                })
+                    .json({ message: "Usuario reactivado" });
             }
-            const response = await this.userModel.updateUser({ isActive: true }, id.toString());
-            if (!response) {
-                return res.status(404).json({ message: "Usuario no encontrado" });
+            catch (error) {
+                console.error("Error reactivando usuario:", error);
+                return res.status(500).json({ message: "Error interno del servidor" });
             }
-            return res.clearCookie("reactive").json({ message: "Usuario reactivado" });
         };
-        //envia una URL al correo del usuario
         this.resetLogin = async (req, res) => {
             try {
                 //en el req.body puede venir el email o el user

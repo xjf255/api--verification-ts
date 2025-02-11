@@ -27,7 +27,8 @@ export class VerificationController {
       }
 
       if (!userData.isActive) {
-        return res.status(403).cookie("reactive", { id: userData.id }, {
+        const reactiveToken = generarToken({ id: userData.id }, "1h")
+        return res.status(401).cookie("reactive", reactiveToken, {
           httpOnly: true,
           sameSite: "strict",
           expires: new Date(Date.now() + hrInMs)

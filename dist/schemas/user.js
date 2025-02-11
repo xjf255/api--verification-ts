@@ -8,6 +8,7 @@ const schemaUsers = z.object({
         .string()
         .length(8, "El número de teléfono debe tener exactamente 8 dígitos.")
         .regex(/^\d+$/, "El número de teléfono solo puede contener dígitos."),
+    "isActive": z.boolean()
 });
 export function validatedUsers(object) {
     return schemaUsers.safeParse(object);

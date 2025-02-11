@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
-import { generarToken } from "../utils/generateToken.js"
+import { generarToken, getInfoToToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../services/cloudMethods.js"
 import { sendMail } from "../services/sendMail.js"
@@ -26,14 +26,12 @@ export class UsersController {
       } else {
         req.body.avatar = 'https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp'
       }
-      console.log(req.body)
       const user = validatedUsers(req.body)
       if (user.error) {
         return res.status(400).json({ message: JSON.parse(user.error.message) })
       }
 
       const userData = await this.userModel.createUser(user.data)
-      console.log(userData)
       const accessToken = generarToken(userData)
       const refreshToken = generarToken(userData, "7d")
 
@@ -62,7 +60,6 @@ export class UsersController {
         })
         .json(userData)
     } catch (error: any) {
-      console.log(error)
       if (error.code === "23505") {
         if (error.constraint === "users_email_unique") {
           return res.status(409).json({ message: "El correo ya esta en uso" })
@@ -76,7 +73,7 @@ export class UsersController {
     }
   }
 
-  updateUser = async (req: Request, res: Response): Promise<any> => {
+  updatedUser = async (req: Request, res: Response): Promise<any> => {
     try {
       const id = req?.user?.id || req?.params?.id
 
@@ -87,9 +84,7 @@ export class UsersController {
       if (req.file) {
         await this.handleAvatarUpdate(req, id)
       }
-      console.log(req.body)
-      const updatedUserInfo = validatedPartialUsers({ ...req.body })
-      console.log(updatedUserInfo)
+      const updatedUserInfo = validatedPartialUsers({ ...req.body, isActive: req.body.isActive === "true" })
       if (updatedUserInfo.error) {
         return res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) })
       }
@@ -158,18 +153,58 @@ export class UsersController {
   }
 
   reactiveUser = async (req: Request, res: Response): Promise<any> => {
-    const id = req?.user?.id
-    if (!id || !isValidUUID(id)) {
-      return res.status(400).json({ message: "ID inválido" })
+    try {
+      const token = req.cookies?.reactive
+      if (!token) {
+        return res.status(400).json({ message: "Token no proporcionado" })
+      }
+
+      const reactiveToken = getInfoToToken(token)
+      if (!reactiveToken || !reactiveToken.id || !isValidUUID(reactiveToken.id)) {
+        return res.status(400).json({ message: "ID inválido o token corrupto" })
+      }
+
+      const id = reactiveToken.id
+
+      const info = await this.userModel.updateUser({ isActive: true }, id.toString())
+      if (!info || Object.keys(info).length === 0) {
+        return res.status(404).json({ message: "Usuario no encontrado o no modificado" })
+      }
+
+      const accessToken = generarToken(info as CleanUser)
+      const refreshToken = generarToken(info as CleanUser, '7d')
+
+      const newSession = {
+        userId: id,
+        accessToken: accessToken ?? "",
+        refreshToken: refreshToken ?? "",
+        expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
+      }
+      const session = await this.userModel.createSession(newSession)
+      if (!session) {
+        return res.status(500).json({ message: "Error al crear la sesión" })
+      }
+
+      return res
+        .clearCookie("reactive")
+        .cookie("access_token", session.accessToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          secure: true,
+          expires: new Date(Date.now() + hrInMs)
+        })
+        .cookie("refresh_token", session.refreshToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          expires: new Date(Date.now() + hrInMs * 24 * 7)
+        })
+        .json({ message: "Usuario reactivado" })
+    } catch (error) {
+      console.error("Error reactivando usuario:", error)
+      return res.status(500).json({ message: "Error interno del servidor" })
     }
-    const response = await this.userModel.updateUser({ isActive: true }, id.toString())
-    if (!response) {
-      return res.status(404).json({ message: "Usuario no encontrado" })
-    }
-    return res.clearCookie("reactive").json({ message: "Usuario reactivado" })
   }
 
-  //envia una URL al correo del usuario
   resetLogin = async (req: Request, res: Response): Promise<any> => {
     try {
       //en el req.body puede venir el email o el user
@@ -230,7 +265,6 @@ export class UsersController {
   authentication = async (req: Request, res: Response): Promise<any> => {
     try {
       // obtengo el token de la URL
-      console.log(req.params)
       const { token } = req.params
       // busco el usuario por el token
       const infoUser = await this.userModel.searchUserByToken(token)
@@ -249,16 +283,16 @@ export class UsersController {
         const verificationIdToken = generarToken({ verificationId }, "5m")
         await sendSMS({ phoneNumber: phone, code })
         return res.cookie("verification", verificationIdToken, {
-            httpOnly: true,
-            sameSite: "strict",
-            expires: new Date(Date.now() + 1000 * 60 * 5)
-          })
+          httpOnly: true,
+          sameSite: "strict",
+          expires: new Date(Date.now() + 1000 * 60 * 5)
+        })
           .json({ message: 'Codigo enviado' })
       }
 
       return res.status(401).json({ message: 'no se pudo en enviar el codigo' })
     } catch (error) {
-      console.log(error)
+      console.error(error)
       return res.status(500).json({ message: error })
     }
   }
