@@ -1,4 +1,4 @@
-import { request, Request, Response } from "express"
+import { Request, Response } from "express"
 import { validatedEmailUsers, validatedPartialUsers, validatedUsers } from "../schemas/user.js"
 import { generarToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
@@ -18,7 +18,7 @@ export class UsersController {
     this.userModel = UserModel
   }
 
-  createUser = async (req: Request, res: Response): Promise<void> => {
+  createUser = async (req: Request, res: Response): Promise<any> => {
     try {
       const file = req.file
       if (file) {
@@ -29,8 +29,7 @@ export class UsersController {
       console.log(req.body)
       const user = validatedUsers(req.body)
       if (user.error) {
-        res.status(400).json({ message: JSON.parse(user.error.message) })
-        return
+        return res.status(400).json({ message: JSON.parse(user.error.message) })
       }
 
       const userData = await this.userModel.createUser(user.data)
@@ -39,8 +38,7 @@ export class UsersController {
       const refreshToken = generarToken(userData, "7d")
 
       if (!accessToken || !refreshToken) {
-        res.status(403).json({ message: "Error al generar token" })
-        return
+        return res.status(403).json({ message: "Error al generar token" })
       }
 
       await this.userModel.createSession({
@@ -51,7 +49,7 @@ export class UsersController {
       })
 
 
-      res.status(201)
+      return res.status(201)
         .cookie("access_token", accessToken, {
           httpOnly: true,
           sameSite: "strict",
@@ -67,58 +65,53 @@ export class UsersController {
       console.log(error)
       if (error.code === "23505") {
         if (error.constraint === "users_email_unique") {
-          res.status(409).json({ message: "El correo ya esta en uso" })
+          return res.status(409).json({ message: "El correo ya esta en uso" })
         } else {
-          res.status(409).json({ message: "El usuario ya esta en uso" })
+          return res.status(409).json({ message: "El usuario ya esta en uso" })
         }
       } else {
         console.log(error)
-        res.status(500).json({ message: "Error interno del servidor" })
+        return res.status(500).json({ message: "Error interno del servidor" })
       }
     }
   }
 
-  updateUser = async (req: Request, res: Response): Promise<void> => {
+  updateUser = async (req: Request, res: Response): Promise<any> => {
     try {
       const id = req?.user?.id || req?.params?.id
 
       if (!isValidUUID(id)) {
-        res.status(400).json({ message: "ID inválido" })
-        return
+        return res.status(400).json({ message: "ID inválido" })
       }
 
       if (req.file) {
         await this.handleAvatarUpdate(req, id)
       }
-
+      console.log(req.body)
       const updatedUserInfo = validatedPartialUsers({ ...req.body })
+      console.log(updatedUserInfo)
       if (updatedUserInfo.error) {
-        res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) })
-        return
+        return res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) })
       }
 
       const { password, ...otherData } = updatedUserInfo.data as { password?: string } & Record<string, any>
-
       if (password) {
         otherData.password = await hashPassword(password)
       }
-
       const userToUpdate = Object.fromEntries(
         Object.entries(otherData).filter(([_, value]) => value !== null)
       )
-
       const isUpdated = await this.userModel.updateUser(userToUpdate, id)
       if (!isUpdated) {
         throw new Error("Usuario no encontrado")
       }
-
-      res.json({ message: "Usuario actualizado correctamente" })
+      return res.json({ message: "Usuario actualizado correctamente" })
     } catch (error: any) {
       if (error.code === "23505") {
-        res.status(409).json({ message: "El usuario o correo no válido" })
+        return res.status(409).json({ message: "El usuario o correo no válido" })
       } else {
         console.error("Error al actualizar usuario:", error)
-        res.status(500).json({ message: "Error interno del servidor" })
+        return res.status(500).json({ message: "Error interno del servidor" })
       }
     }
   }
@@ -153,31 +146,27 @@ export class UsersController {
   deleteUser = async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params ?? req?.user
     if (!isValidUUID(id)) {
-      res.status(400).json({ message: "ID inválido" })
-      return
+      return res.status(400).json({ message: "ID inválido" })
     }
     const response = await this.userModel.updateUser({ isActive: false }, id)
     if (!response) {
-      res
+      return res
         .clearCookie("access_token")
         .status(404)
         .json({ message: "Usuario no encontrado" })
-      return
     }
   }
 
   reactiveUser = async (req: Request, res: Response): Promise<any> => {
     const id = req?.user?.id
     if (!id || !isValidUUID(id)) {
-      res.status(400).json({ message: "ID inválido" })
-      return
+      return res.status(400).json({ message: "ID inválido" })
     }
     const response = await this.userModel.updateUser({ isActive: true }, id.toString())
     if (!response) {
-      res.status(404).json({ message: "Usuario no encontrado" })
-      return
+      return res.status(404).json({ message: "Usuario no encontrado" })
     }
-    res.clearCookie("reactive").json({ message: "Usuario reactivado" })
+    return res.clearCookie("reactive").json({ message: "Usuario reactivado" })
   }
 
   //envia una URL al correo del usuario
@@ -189,24 +178,21 @@ export class UsersController {
         user, email
       })
       if (isValidInfo.error) {
-        res.status(400).json({ message: JSON.parse(isValidInfo.error.message) })
-        return
+        return res.status(400).json({ message: JSON.parse(isValidInfo.error.message) })
       }
       const { user: validUser, email: validEmail } = isValidInfo.data
       const valueOfUser = validEmail ?? validUser
       if (!valueOfUser) {
-        res.status(404).json({ message: 'no ingreso ningun valor para buscar el usuario' })
-        return
+        return res.status(404).json({ message: 'no ingreso ningun valor para buscar el usuario' })
       }
       //busca el usuario por email o user
       const userData = await this.userModel.getAllInfo(valueOfUser)
       if (!userData) {
-        res.status(404).json({ message: "Usuario no encontrado" })
-        return
+        return res.status(404).json({ message: "Usuario no encontrado" })
       }
       const { id, user: userName, email: addressee } = userData as CleanUser
 
-      const time = new Date(Date.now() + 5 * 60 * 1000)
+      const time = new Date(Date.now() + hrInMs * 24)
       const token = generarToken({ codigo: Math.floor(Math.random() * 1000000).toString() }, "5m")
       const data = { userId: id, resetTokenExpires: time, resetToken: token }
       const templatePath = path.join(getDirname(), "../view/user/templateMail.ejs")
@@ -215,8 +201,7 @@ export class UsersController {
       ejs.renderFile(templatePath, templateData, async (err, html) => {
         if (err) {
           console.error("Error al renderizar la plantilla:", err.message)
-          res.status(500).json({ message: "Error al procesar la plantilla del correo." })
-          return
+          return res.status(500).json({ message: "Error al procesar la plantilla del correo." })
         }
 
         try {
@@ -226,18 +211,17 @@ export class UsersController {
           // Actualiza la informacion del usuario
           const isUpdated = await this.userModel.verificationAttempts(data)
           if (!isUpdated) {
-            res.status(500).json({ message: "Error al actualizar los datos del usuario" })
-            return
+            return res.status(500).json({ message: "Error al actualizar los datos del usuario" })
           }
-          res.json({ message: "Se envió la URL correctamente." })
+          return res.json({ message: `Correo enviado correctamente a ${addressee}` })
         } catch (mailError) {
           console.error("Error al enviar el correo:", mailError)
-          res.status(500).json({ message: "Error al enviar el correo." })
+          return res.status(500).json({ message: "Error al enviar el correo." })
         }
       })
     } catch (error) {
       console.error("Error en resetLogin:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
+      return res.status(500).json({ message: "Error interno del servidor" })
     }
   }
 
@@ -246,17 +230,16 @@ export class UsersController {
   authentication = async (req: Request, res: Response): Promise<any> => {
     try {
       // obtengo el token de la URL
+      console.log(req.params)
       const { token } = req.params
       // busco el usuario por el token
       const infoUser = await this.userModel.searchUserByToken(token)
       if (!infoUser) {
-        res.status(404).json({ message: "no se encontro el usuario" })
-        return
+        return res.status(404).json({ message: "no se encontro el usuario" })
       }
       const { phone, id } = infoUser as CleanUser
       if (!phone || !id) {
-        res.status(404).json({ message: "acceso no autorizado, por falta de datos" })
-        return
+        return res.status(404).json({ message: "acceso no autorizado, por falta de datos" })
       }
       const code = String(Math.floor(100000 + Math.random() * 900000)) // Código de 6 dígitos
       const hashedCode = await hashCode(code)
@@ -265,31 +248,28 @@ export class UsersController {
       if (verificationId) {
         const verificationIdToken = generarToken({ verificationId }, "5m")
         await sendSMS({ phoneNumber: phone, code })
-        res.status(200)
-          .cookie("verification", verificationIdToken, {
+        return res.cookie("verification", verificationIdToken, {
             httpOnly: true,
             sameSite: "strict",
             expires: new Date(Date.now() + 1000 * 60 * 5)
           })
           .json({ message: 'Codigo enviado' })
-        return
       }
 
-      res.status(401).json({ message: 'no se pudo en enviar el codigo' })
+      return res.status(401).json({ message: 'no se pudo en enviar el codigo' })
     } catch (error) {
       console.log(error)
-      res.status(500).json({ message: error })
+      return res.status(500).json({ message: error })
     }
   }
   //el usuario envia codigo
   validationToken = async (req: Request, res: Response): Promise<any> => {
-    const { cod } = req.params
+    const { cod } = req.body
     const verificationToken = req.cookies?.verification
     try {
       const info = await this.userModel.verification(verificationToken, cod) as CleanUser
       if (!info || !info.id) {
-        res.status(404).json({ message: "Usuario no encontrado" })
-        return
+        return res.status(404).json({ message: "Usuario no encontrado" })
       }
       const { id } = info
       const accessToken = generarToken(info)
@@ -302,7 +282,7 @@ export class UsersController {
         expiresAt: new Date(Date.now() + hrInMs * 24 * 7)
       }
       const session = await this.userModel.createSession(newSession)
-      res
+      return res
         .cookie("access_token", session.accessToken, {
           httpOnly: true,
           sameSite: "strict",
@@ -317,7 +297,7 @@ export class UsersController {
         .json({ message: "Código válido" })
     } catch (error) {
       console.error("Error al verificar el código:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
+      return res.status(500).json({ message: "Error interno del servidor" })
     }
   }
 }

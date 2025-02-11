@@ -86,17 +86,18 @@ export class VerificationController {
                         if (!updateVerification) {
                             throw new Error("Failed to update session");
                         }
+                        return res.cookie("access_token", newToken, {
+                            httpOnly: true,
+                            sameSite: "strict",
+                            expires: new Date(Date.now() + hrInMs)
+                        }).json(updateVerification);
                     }
                     catch (error) {
                         return res.status(500).json({ error: "Server error. Try again later." });
                     }
-                    return res.cookie("access_token", newToken, {
-                        httpOnly: true,
-                        sameSite: "strict",
-                        expires: new Date(Date.now() + hrInMs)
-                    }).json(infoUser);
                 }
-                return res.json(accessTokenInfo);
+                const user = await this.userModel.getById(accessTokenInfo.id);
+                return res.json(user);
             }
             catch (error) {
                 console.error("Token error:", error);

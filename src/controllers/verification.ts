@@ -74,58 +74,58 @@ export class VerificationController {
   protected = async (req: Request, res: Response): Promise<any> => {
     const token = req.cookies?.access_token ?? ""
     const refreshToken = req.cookies?.refresh_token ?? ""
-  
+
     if (!refreshToken) {
       return res.status(403).json({ error: "Access denied. No token provided." })
     }
-  
+
     let refreshTokenInfo, accessTokenInfo
-  
+
     try {
       refreshTokenInfo = getInfoToToken(refreshToken)
       accessTokenInfo = getInfoToToken(token)
-  
+
       if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
         throw new Error("Invalid token format")
       }
-  
+
       const { exp: expRefreshToken } = refreshTokenInfo
       const { exp: expAccessToken } = accessTokenInfo
-  
+
       if (!expRefreshToken || Date.now() >= expRefreshToken * 1000) {
         return res.status(403)
           .clearCookie("access_token")
           .clearCookie("refresh_token")
           .json({ error: "Session expired. Please log in again." })
       }
-  
+
       if (!expAccessToken || Date.now() >= expAccessToken * 1000) {
         const infoUser = refreshTokenInfo
         const newToken = generarToken(infoUser)
-  
+
         try {
           const updateVerification = await this.userModel.updateSession({ accessToken: newToken }, infoUser.id)
           if (!updateVerification) {
             throw new Error("Failed to update session")
           }
+          return res.cookie("access_token", newToken, {
+            httpOnly: true,
+            sameSite: "strict",
+            expires: new Date(Date.now() + hrInMs)
+          }).json(updateVerification)
         } catch (error) {
           return res.status(500).json({ error: "Server error. Try again later." })
         }
-  
-        return res.cookie("access_token", newToken, {
-          httpOnly: true,
-          sameSite: "strict",
-          expires: new Date(Date.now() + hrInMs)
-        }).json(infoUser)
       }
-  
-      return res.json(accessTokenInfo)
-  
+      const user = await this.userModel.getById(accessTokenInfo.id)
+
+      return res.json(user)
+
     } catch (error) {
       console.error("Token error:", error)
       return res.status(403).json({ error: "Access denied. Invalid token." })
     }
-  }  
+  }
 
   logout = async (req: Request, res: Response): Promise<any> => {
     const accessToken = req.cookies?.access_token ?? ""

@@ -5,6 +5,6 @@ export const createVerificationRouter = ({ UserModel }) => {
     const verificationRouter = Router();
     verificationRouter.post('/login', verificationController.login.bind(verificationController));
     verificationRouter.get('/protected', verificationController.protected.bind(verificationController));
-    verificationRouter.get('/logout', verificationController.logout.bind(verificationController));
+    verificationRouter.post('/logout', verificationController.logout.bind(verificationController));
     return verificationRouter;
 };
