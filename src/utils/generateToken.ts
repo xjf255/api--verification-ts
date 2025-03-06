@@ -23,7 +23,6 @@ export function getInfoToToken(token: string): any {
   try {
     return jwt.verify(token, SECRET_KEY) as DecodedToken
   } catch (error) {
-    console.error("Error verifying token:", error)
     return new Object({ id: "" })
   }
 }

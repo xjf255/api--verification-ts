@@ -18,7 +18,6 @@ export function getInfoToToken(token) {
         return jwt.verify(token, SECRET_KEY);
     }
     catch (error) {
-        console.error("Error verifying token:", error);
         return new Object({ id: "" });
     }
 }

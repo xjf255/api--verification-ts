@@ -9,6 +9,7 @@ export const usersTable = pgTable('users', {
     password: text('password').notNull(),
     phone: text('phone').notNull(),
     isActive: boolean('is_active').default(true).notNull(),
+    isGuest: boolean('is_guest').default(false).notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().$onUpdate(() => new Date()),
 });

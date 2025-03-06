@@ -20,13 +20,11 @@ export class UsersController {
                 else {
                     req.body.avatar = 'https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp';
                 }
-                console.log(req.body);
                 const user = validatedUsers(req.body);
                 if (user.error) {
                     return res.status(400).json({ message: JSON.parse(user.error.message) });
                 }
                 const userData = await this.userModel.createUser(user.data);
-                console.log(userData);
                 const accessToken = generarToken(userData);
                 const refreshToken = generarToken(userData, "7d");
                 if (!accessToken || !refreshToken) {
@@ -52,7 +50,6 @@ export class UsersController {
                     .json(userData);
             }
             catch (error) {
-                console.log(error);
                 if (error.code === "23505") {
                     if (error.constraint === "users_email_unique") {
                         return res.status(409).json({ message: "El correo ya esta en uso" });
@@ -76,9 +73,7 @@ export class UsersController {
                 if (req.file) {
                     await this.handleAvatarUpdate(req, id);
                 }
-                console.log({ ...req.body });
                 const updatedUserInfo = validatedPartialUsers({ ...req.body, isActive: req.body.isActive === "true" });
-                console.log(updatedUserInfo);
                 if (updatedUserInfo.error) {
                     return res.status(400).json({ message: JSON.parse(updatedUserInfo.error.message) });
                 }
@@ -149,7 +144,6 @@ export class UsersController {
                     return res.status(400).json({ message: "ID inválido o token corrupto" });
                 }
                 const id = reactiveToken.id;
-                console.log('activar cuenta');
                 const info = await this.userModel.updateUser({ isActive: true }, id.toString());
                 if (!info || Object.keys(info).length === 0) {
                     return res.status(404).json({ message: "Usuario no encontrado o no modificado" });
@@ -244,7 +238,6 @@ export class UsersController {
         this.authentication = async (req, res) => {
             try {
                 // obtengo el token de la URL
-                console.log(req.params);
                 const { token } = req.params;
                 // busco el usuario por el token
                 const infoUser = await this.userModel.searchUserByToken(token);
@@ -272,7 +265,7 @@ export class UsersController {
                 return res.status(401).json({ message: 'no se pudo en enviar el codigo' });
             }
             catch (error) {
-                console.log(error);
+                console.error(error);
                 return res.status(500).json({ message: error });
             }
         };
