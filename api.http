@@ -41,3 +41,7 @@ Content-Type:  application/json
 {
   "user":"xjf_255"
 }
+
+### reset login
+GET  http://localhost:1234/users/juanfher.255@gmail.com
+Content-Type:  application/json

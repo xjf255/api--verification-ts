@@ -17,6 +17,7 @@ export type ValidateToReset = Pick<User, "email", "user">
 
 interface IUserModel {
   getById: (id: string) => Promise<CleanUser | null>
+  getByEmail: (email: string) => Promise<CleanUser | boolean>
   createUser: (user: CreatedUser) => Promise<CleanUser>,
   createSession: (input: InsertSessions) => Promise<SelectSessions>
   removeSession: (accessToken: string, refreshToken: string) => Promise<boolean>

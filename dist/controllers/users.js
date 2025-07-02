@@ -11,6 +11,17 @@ import { isValidUUID } from "../utils/validatedUUID.js";
 import { hrInMs } from "../utils/constant.js";
 export class UsersController {
     constructor({ UserModel }) {
+        this.getUserByEmail = async (req, res) => {
+            const { email } = req.params;
+            if (!email) {
+                return res.status(400).json({ message: "Email no proporcionado" });
+            }
+            const user = await this.userModel.getByEmail(email);
+            if (!user) {
+                return res.status(404).json({ message: "Usuario no encontrado" });
+            }
+            return res.json(user);
+        };
         this.createUser = async (req, res) => {
             try {
                 const file = req.file;

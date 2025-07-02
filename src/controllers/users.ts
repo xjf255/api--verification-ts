@@ -18,6 +18,18 @@ export class UsersController {
     this.userModel = UserModel
   }
 
+  getUserByEmail = async (req: Request, res: Response): Promise<any> => {
+    const { email } = req.params
+    if (!email) {
+      return res.status(400).json({ message: "Email no proporcionado" })
+    }
+    const user = await this.userModel.getByEmail(email)
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" })
+    }
+    return res.json(user)
+  }
+
   createUser = async (req: Request, res: Response): Promise<any> => {
     try {
       const file = req.file
