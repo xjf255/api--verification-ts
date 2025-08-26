@@ -1,4 +1,6 @@
-import { boolean, pgTable, text, timestamp, uuid, integer } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, text, timestamp, uuid, integer, pgEnum, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
+
+export const friendShipStatus = pgEnum('friendship_status', ["pending", "accepted", "blocked"]);
 
 export const usersTable = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -10,7 +12,7 @@ export const usersTable = pgTable('users', {
   password: text('password').notNull(),
   phone: text('phone').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
-  isGuest : boolean('is_guest').default(false).notNull(),
+  isGuest: boolean('is_guest').default(false).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().$onUpdate(() => new Date()),
 })
@@ -33,6 +35,23 @@ export const verificationsTable = pgTable('verifications', {
   rebootAttempts: integer('reboot_attempts').default(3).notNull(), // Intentos restantes para 2FA
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().$onUpdate(() => new Date()),
+})
+
+export const user_friendships = pgTable('user_friendships', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requesterId: uuid('requester_id').notNull().references(() => usersTable.id,
+    { onDelete: 'cascade' }),
+  addresseeId: uuid('addressee_id').notNull().references(() => usersTable.id,
+    { onDelete: 'cascade' }),
+  status: friendShipStatus('status').notNull().default('pending'), // pending, accepted, rejected,
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  responsedAt: timestamp('responded_at', { withTimezone: true })
+}, (t) => {
+  return {
+    requesterIdx: index('idx_friendships_requested').on(t.requesterId),
+    addresseeIdx: index('idx_friendships_addressee').on(t.addresseeId),
+    uniqueDirected: uniqueIndex('uq_friendships').on(t.requesterId, t.addresseeId)
+  }
 })
 
 export type InsertSessions = typeof sessionsTable.$inferInsert

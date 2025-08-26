@@ -17,11 +17,11 @@ export type ValidateToReset = Pick<User, "email", "user">
 
 interface IUserModel {
   getById: (id: string) => Promise<CleanUser | null>
-  getByEmail: (email: string) => Promise<CleanUser | boolean>
+  getByEmail: (email: string) => Promise<Omit<CleanUser, "id" | "createdAt" | "updatedAt"> | boolean>
   createUser: (user: CreatedUser) => Promise<CleanUser>,
   createSession: (input: InsertSessions) => Promise<SelectSessions>
   removeSession: (accessToken: string, refreshToken: string) => Promise<boolean>
-  updateSession: (input: Partial<InsertSessions>, id:string) => Promise<CleanUser | false>
+  updateSession: (input: Partial<InsertSessions>, id: string) => Promise<CleanUser | false>
   updateUser: (userToUpdate: Partial<InsertUser>, id: string) => Promise<boolean | CleanUser>
   createVerification: (input: InsertVerification) => Promise<boolean>
   verificationAttempts: (values: InsertVerification) => Promise<boolean>
