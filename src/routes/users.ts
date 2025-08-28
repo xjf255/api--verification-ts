@@ -12,6 +12,7 @@ export const createUsersRouter = ({ UserModel }: IUserClass) => {
   userRouter.put('/:id', upload.single('avatar'), usersController.updatedUser.bind(usersController))
   userRouter.delete('/:id', usersController.deleteUser.bind(usersController))
   userRouter.get('/:email', usersController.getUserByEmail.bind(usersController))
+  userRouter.post('/send-friend-request/:id', usersController.requestSend.bind(usersController))
   userRouter.post('/reactive', usersController.reactiveUser.bind(usersController))
   userRouter.post('/resetLogin', usersController.resetLogin.bind(usersController))
   userRouter.get('/auth/:token', usersController.authentication.bind(usersController))

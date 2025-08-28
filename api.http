@@ -2,10 +2,35 @@ POST http://localhost:1234/users
 Content-Type: application/json
 
 {
-  "user": "fede",
-  "password": "prduebasUni4@",
-  "email":"admi@gmail.gt",
+  "user": "xjf_255",
+  "password": "Juanfher1.",
+  "email":"juanfher.255@gmail.com",
+  "isActive": true,
+  "phone": "51450650",
   "sql": "drop * table"
+}
+
+### post admin
+
+POST http://localhost:1234/users
+Content-Type: application/json
+
+{
+  "user": "@dmin",
+  "password": "Admin10.",
+  "email":"adiazt4@miumg.edu.gt",
+  "isActive": true,
+  "phone": "53205861",
+  "sql": "drop * table"
+}
+
+### send friend request
+
+POST http://localhost:1234/user/send-friend-request
+Content-Type: application/json
+
+{
+  "email":"juanfher.255@gmail.com"
 }
 
 ### get users

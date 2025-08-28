@@ -122,6 +122,7 @@ export class VerificationController {
             let refreshTokenInfo, accessTokenInfo;
             try {
                 refreshTokenInfo = getInfoToToken(refreshToken);
+                console.log("Refresh Token Info:", refreshTokenInfo);
                 accessTokenInfo = getInfoToToken(token);
                 if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
                     throw new Error("Invalid token format");
@@ -149,6 +150,7 @@ export class VerificationController {
                         }).json(updateVerification);
                     }
                     catch (error) {
+                        console.error(error);
                         return res.status(500).json({ error: "Server error. Try again later." });
                     }
                 }

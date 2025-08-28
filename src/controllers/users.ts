@@ -27,7 +27,41 @@ export class UsersController {
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" })
     }
-    return res.json(user)
+    const { id, ...userData } = user as CleanUser
+    return res.json(userData)
+  }
+
+  requestSend = async (req: Request, res: Response): Promise<any> => {
+    try {
+      const id = req?.user?.id || req?.params?.id
+
+      if (!isValidUUID(id)) {
+        res.status(400).json({ message: "ID inválido" })
+        return false
+      }
+      const result = validatedEmailUsers(req.body)
+      const email = result.data?.email
+      if (!email) {
+        res.status(400).json({ message: "Email no proporcionado" })
+        return false
+      }
+      const user = await this.userModel.getByEmail(email) as CleanUser
+      if (!user) {
+        res.status(404).json({ message: "Usuario no encontrado" })
+        return false
+      }
+      const response = await this.userModel.friendRequestSend(email, id)
+      if (!response) {
+        res.status(500).json({ message: "Error al enviar la solicitud de amistad" })
+        return false
+      }
+      res.json({ message: "Solicitud de amistad enviada" })
+      return true
+    } catch (error) {
+      console.error("Error al enviar la solicitud de amistad:", error)
+      res.status(500).json({ message: "Error interno del servidor" })
+      return false
+    }
   }
 
   createUser = async (req: Request, res: Response): Promise<any> => {

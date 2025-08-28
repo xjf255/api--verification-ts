@@ -145,6 +145,7 @@ export class VerificationController {
 
     try {
       refreshTokenInfo = getInfoToToken(refreshToken)
+      console.log("Refresh Token Info:", refreshTokenInfo)  
       accessTokenInfo = getInfoToToken(token)
 
       if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
@@ -176,6 +177,7 @@ export class VerificationController {
             expires: new Date(Date.now() + hrInMs)
           }).json(updateVerification)
         } catch (error) {
+          console.error(error)
           return res.status(500).json({ error: "Server error. Try again later." })
         }
       }
