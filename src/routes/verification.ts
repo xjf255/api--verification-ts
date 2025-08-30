@@ -1,9 +1,9 @@
 import { Router } from "express"
 import { VerificationController } from "../controllers/verification.js"
-import { IUserClass } from "../types.js"
+import { IUserClass, IUserModel } from "../types.js"
 
-export const createVerificationRouter = ({ UserModel }: IUserClass) => {
-  const verificationController = new VerificationController({ UserModel })
+export const createVerificationRouter = (UserModel: IUserModel) => {
+  const verificationController = new VerificationController(UserModel)
   const verificationRouter = Router()
   verificationRouter.post('/login', verificationController.login.bind(verificationController))
   verificationRouter.get('/protected', verificationController.protected.bind(verificationController))

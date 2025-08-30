@@ -1,13 +1,13 @@
 import { Request, Response } from "express"
 import { validatedPartialUsers } from "../schemas/user.js"
 import { generarToken, getInfoToToken } from "../utils/generateToken.js"
-import { CleanUser, IUserClass } from "../types.js"
+import { CleanUser, IUserClass, IUserModel } from "../types.js"
 import { hrInMs } from "../utils/constant.js"
 
 export class VerificationController {
   private userModel
 
-  constructor({ UserModel }: IUserClass) {
+  constructor(UserModel: IUserModel) {
     this.userModel = UserModel
   }
 
@@ -145,7 +145,7 @@ export class VerificationController {
 
     try {
       refreshTokenInfo = getInfoToToken(refreshToken)
-      console.log("Refresh Token Info:", refreshTokenInfo)  
+      console.log("Refresh Token Info:", refreshTokenInfo)
       accessTokenInfo = getInfoToToken(token)
 
       if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {

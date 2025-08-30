@@ -33,6 +33,11 @@ interface IUserModel {
   friendRequestSend: (requester: string, addresseeId: string) => Promise<boolean>
 }
 
+interface IFriendShipModel {
+  friendRequestSend: (requester: string, addresseeId: string) => Promise<boolean>
+}
+
 interface IUserClass {
   UserModel: IUserModel
+  FriendShipModel: IFriendShipModel
 }

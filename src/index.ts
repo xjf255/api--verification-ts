@@ -6,8 +6,9 @@ import { IUserClass, IUserModel } from './types.js'
 import rateLimit from 'express-rate-limit'
 import { createVerificationRouter } from './routes/verification.js'
 import { authenticateUser } from './middleware/authenticateUser.js'
+import { createFriendShipsRouter } from './routes/friendShips.js'
 
-export const createApp = ({ UserModel }: IUserClass) => {
+export const createApp = ({ UserModel, FriendShipModel }: IUserClass) => {
   const app = express()
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -21,8 +22,9 @@ export const createApp = ({ UserModel }: IUserClass) => {
   app.use(json())
   app.use(corsMiddleware())
   app.disable('x-powered-by')
-  app.use("/users", createUsersRouter({ UserModel }))
-  app.use("/verification", createVerificationRouter({ UserModel }))
+  app.use("/users", createUsersRouter(UserModel))
+  app.use("/verification", createVerificationRouter(UserModel))
+  app.use("/friendships", createFriendShipsRouter({ UserModel, FriendShipModel }))
 
   const PORT = process.env.SERVICE_PORT ?? 3001
 
