@@ -7,7 +7,7 @@ export const createFriendShipsRouter = ({ UserModel, FriendShipModel }) => {
     friendShipsRouter.post('/:friendshipId/accept', friendShipsController.requestAccept.bind(friendShipsController));
     friendShipsRouter.delete('/:friendshipId', friendShipsController.removeFriend.bind(friendShipsController));
     friendShipsRouter.post('/:friendshipId/reject', friendShipsController.requestReject.bind(friendShipsController));
-    friendShipsRouter.delete('/request/:friendshipId/cancel', friendShipsController.cancelRequest.bind(friendShipsController));
+    friendShipsRouter.delete('/:friendshipId/cancel', friendShipsController.cancelRequest.bind(friendShipsController));
     friendShipsRouter.get('/:userId/friends', friendShipsController.getFriendsList.bind(friendShipsController));
     friendShipsRouter.get('/:userId/requests', friendShipsController.getFriendRequestsList.bind(friendShipsController));
     return friendShipsRouter;

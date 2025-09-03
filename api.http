@@ -72,7 +72,10 @@ GET  http://localhost:1234/users/juanfher.255@gmail.co
 Content-Type:  application/json
 
 ### get friends list
-GET http://localhost:1234/friendships/2db507e0-2240-4641-91e7-296aadfdfb7a/requests
+GET http://localhost:1234/friendships/23368730-e585-4bf0-ba13-b2636a1a8027/friends
+
+### get friends request list
+GET http://localhost:1234/friendships/23368730-e585-4bf0-ba13-b2636a1a8027/requests
 
 ### create friendship request
 POST http://localhost:1234/friendships/request
@@ -84,5 +87,12 @@ Content-Type: application/json
 }
 
 ### accept friendship request
-POST http://localhost:1234/friendships/6624a27a-5170-4f10-8575-000050ebae49/accept
+POST http://localhost:1234/friendships/6bcd9a88-7d7e-4217-9aa7-32b40a0fdbd2/accept
 Content-Type: application/json
+
+### reject friendship request
+POST http://localhost:1234/friendships/b15fd8b3-5f1e-4ed2-84da-cfb3da2768c7/reject
+Content-Type: application/json
+
+### remove friendship
+DELETE http://localhost:1234/friendships/0609f5e4-1de8-4863-b01e-efaf08b3bd95
