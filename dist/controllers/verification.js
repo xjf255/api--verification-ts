@@ -2,7 +2,7 @@ import { validatedPartialUsers } from "../schemas/user.js";
 import { generarToken, getInfoToToken } from "../utils/generateToken.js";
 import { hrInMs } from "../utils/constant.js";
 export class VerificationController {
-    constructor({ UserModel }) {
+    constructor(UserModel) {
         this.login = async (req, res) => {
             try {
                 const dataUser = validatedPartialUsers({ ...req.body });

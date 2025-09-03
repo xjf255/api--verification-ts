@@ -14,7 +14,8 @@ export interface User {
 
 export type CleanUser = Omit<User, "password">
 export type ValidateToReset = Pick<User, "email", "user">
-
+export type Friendship = Omit<User, "password" | "createdAt" | "updatedAt" | "isActive">
+export type FriendshipRequest = Omit<Friendship, "phone">
 interface IUserModel {
   getById: (id: string) => Promise<CleanUser | null>
   getByEmail: (email: string) => Promise<CleanUser | boolean>
@@ -35,6 +36,12 @@ interface IUserModel {
 
 interface IFriendShipModel {
   friendRequestSend: (requester: string, addresseeId: string) => Promise<boolean>
+  friendRequestAccept: (friendshipId: string) => Promise<boolean>
+  friendRequestReject: (friendshipId: string) => Promise<boolean>
+  cancelFriendRequest: (friendshipId: string) => Promise<boolean>
+  getFriendsList: (userId: string) => Promise<Friendship[]>
+  getFriendRequestsList: (userId: string) => Promise<FriendshipRequest[]>
+  removeFriend: (friendshipId: string) => Promise<boolean>
 }
 
 interface IUserClass {

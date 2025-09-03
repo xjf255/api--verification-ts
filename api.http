@@ -70,3 +70,19 @@ Content-Type:  application/json
 ### reset login
 GET  http://localhost:1234/users/juanfher.255@gmail.co
 Content-Type:  application/json
+
+### get friends list
+GET http://localhost:1234/friendships/2db507e0-2240-4641-91e7-296aadfdfb7a/requests
+
+### create friendship request
+POST http://localhost:1234/friendships/request
+Content-Type: application/json
+
+{
+  "addressee": "adiazt4@miumg.edu.gt",
+  "requesterId": "2db507e0-2240-4641-91e7-296aadfdfb7a"
+}
+
+### accept friendship request
+POST http://localhost:1234/friendships/6624a27a-5170-4f10-8575-000050ebae49/accept
+Content-Type: application/json

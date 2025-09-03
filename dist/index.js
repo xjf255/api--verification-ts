@@ -5,7 +5,8 @@ import { createUsersRouter } from './routes/users.js';
 import rateLimit from 'express-rate-limit';
 import { createVerificationRouter } from './routes/verification.js';
 import { authenticateUser } from './middleware/authenticateUser.js';
-export const createApp = ({ UserModel }) => {
+import { createFriendShipsRouter } from './routes/friendShips.js';
+export const createApp = ({ UserModel, FriendShipModel }) => {
     const app = express();
     const limiter = rateLimit({
         windowMs: 15 * 60 * 1000,
@@ -19,8 +20,9 @@ export const createApp = ({ UserModel }) => {
     app.use(json());
     app.use(corsMiddleware());
     app.disable('x-powered-by');
-    app.use("/users", createUsersRouter({ UserModel }));
-    app.use("/verification", createVerificationRouter({ UserModel }));
+    app.use("/users", createUsersRouter(UserModel));
+    app.use("/verification", createVerificationRouter(UserModel));
+    app.use("/friendships", createFriendShipsRouter({ UserModel, FriendShipModel }));
     const PORT = process.env.SERVICE_PORT ?? 3001;
     app.get("/", (req, res) => {
         res.send(`<a href="http://localhost:${PORT}/users">Ver usuarios</a>`);
