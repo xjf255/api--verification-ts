@@ -192,12 +192,19 @@ export class VerificationController {
   }
 
   logout = async (req: Request, res: Response): Promise<any> => {
-    const accessToken = req.cookies?.access_token ?? ""
-    const refreshToken = req.cookies?.refresh_token ?? ""
-    await this.userModel.removeSession(accessToken, refreshToken)
-    return res
-      .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
-      .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })
-      .json({ message: "Logout exitoso" })
+    try {
+      const accessToken = req.cookies?.access_token ?? ""
+      const refreshToken = req.cookies?.refresh_token ?? ""
+      console.log(accessToken, refreshToken)
+      const isRemove = await this.userModel.removeSession(accessToken, refreshToken)
+      console.log('isRemove' + isRemove)
+      return res
+        .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
+        .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })
+        .json({ message: "Logout exitoso" })
+    } catch (error) {
+      console.error("Error to remove session:", error)
+      return res.status(403).json({ error: "Can´t remove session" })
+    }
   }
 }

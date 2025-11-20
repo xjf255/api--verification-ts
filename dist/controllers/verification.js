@@ -165,6 +165,7 @@ export class VerificationController {
         this.logout = async (req, res) => {
             const accessToken = req.cookies?.access_token ?? "";
             const refreshToken = req.cookies?.refresh_token ?? "";
+            console.log(accessToken, refreshToken);
             await this.userModel.removeSession(accessToken, refreshToken);
             return res
                 .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
