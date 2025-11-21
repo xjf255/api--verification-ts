@@ -145,7 +145,6 @@ export class VerificationController {
 
     try {
       refreshTokenInfo = getInfoToToken(refreshToken)
-      console.log("Refresh Token Info:", refreshTokenInfo)
       accessTokenInfo = getInfoToToken(token)
 
       if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
@@ -167,15 +166,19 @@ export class VerificationController {
         const newToken = generarToken(infoUser)
 
         try {
-          const updateVerification = await this.userModel.updateSession({ accessToken: newToken }, infoUser.id)
-          if (!updateVerification) {
+          const updateSession = await this.userModel.updateSession({
+            accessToken: newToken,
+            expiresAt: new Date(Date.now() + hrInMs)
+          }, refreshToken)
+
+          if (!updateSession) {
             throw new Error("Failed to update session")
           }
           return res.cookie("access_token", newToken, {
             httpOnly: true,
             sameSite: "strict",
             expires: new Date(Date.now() + hrInMs)
-          }).json(updateVerification)
+          }).json(updateSession)
         } catch (error) {
           console.error(error)
           return res.status(500).json({ error: "Server error. Try again later." })
