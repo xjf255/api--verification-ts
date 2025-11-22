@@ -22,7 +22,7 @@ interface IUserModel {
   createUser: (user: CreatedUser) => Promise<CleanUser>,
   createSession: (input: InsertSessions) => Promise<SelectSessions>
   removeSession: (accessToken: string, refreshToken: string) => Promise<boolean>
-  updateSession: (input: Partial<InsertSessions>, refreshToken: string) => Promise<CleanUser | false>
+  updateSession: (input: Partial<InsertSessions>, refreshToken: string) => Promise<boolean>
   updateUser: (userToUpdate: Partial<InsertUser>, id: string) => Promise<boolean | CleanUser>
   createVerification: (input: InsertVerification) => Promise<boolean>
   verificationAttempts: (values: InsertVerification) => Promise<boolean>

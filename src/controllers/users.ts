@@ -80,7 +80,6 @@ export class UsersController {
           return res.status(409).json({ message: "El usuario ya esta en uso" })
         }
       } else {
-        console.log(error)
         return res.status(500).json({ message: "Error interno del servidor" })
       }
     }
@@ -253,10 +252,7 @@ export class UsersController {
         }
 
         try {
-          // Enviar el correo
           const messageId = await sendMail({ addressee, data: html })
-          console.log("Correo enviado con ID:", messageId)
-          // Actualiza la informacion del usuario
           const isUpdated = await this.userModel.verificationAttempts(data)
           if (!isUpdated) {
             return res.status(500).json({ message: "Error al actualizar los datos del usuario" })
@@ -268,7 +264,6 @@ export class UsersController {
         }
       })
     } catch (error) {
-      console.error("Error en resetLogin:", error)
       return res.status(500).json({ message: "Error interno del servidor" })
     }
   }

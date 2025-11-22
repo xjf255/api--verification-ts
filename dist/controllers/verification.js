@@ -122,7 +122,6 @@ export class VerificationController {
             let refreshTokenInfo, accessTokenInfo;
             try {
                 refreshTokenInfo = getInfoToToken(refreshToken);
-                console.log("Refresh Token Info:", refreshTokenInfo);
                 accessTokenInfo = getInfoToToken(token);
                 if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
                     throw new Error("Invalid token format");
@@ -139,15 +138,18 @@ export class VerificationController {
                     const infoUser = refreshTokenInfo;
                     const newToken = generarToken(infoUser);
                     try {
-                        const updateVerification = await this.userModel.updateSession({ accessToken: newToken }, infoUser.id);
-                        if (!updateVerification) {
+                        const updateSession = await this.userModel.updateSession({
+                            accessToken: newToken,
+                            expiresAt: new Date(Date.now() + hrInMs)
+                        }, refreshToken);
+                        if (!updateSession) {
                             throw new Error("Failed to update session");
                         }
                         return res.cookie("access_token", newToken, {
                             httpOnly: true,
                             sameSite: "strict",
                             expires: new Date(Date.now() + hrInMs)
-                        }).json(updateVerification);
+                        }).json(updateSession);
                     }
                     catch (error) {
                         console.error(error);
@@ -166,9 +168,7 @@ export class VerificationController {
             try {
                 const accessToken = req.cookies?.access_token ?? "";
                 const refreshToken = req.cookies?.refresh_token ?? "";
-                console.log(accessToken, refreshToken);
                 const isRemove = await this.userModel.removeSession(accessToken, refreshToken);
-                console.log('isRemove' + isRemove);
                 return res
                     .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
                     .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })

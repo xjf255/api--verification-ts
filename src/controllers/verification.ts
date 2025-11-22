@@ -198,9 +198,7 @@ export class VerificationController {
     try {
       const accessToken = req.cookies?.access_token ?? ""
       const refreshToken = req.cookies?.refresh_token ?? ""
-      console.log(accessToken, refreshToken)
       const isRemove = await this.userModel.removeSession(accessToken, refreshToken)
-      console.log('isRemove' + isRemove)
       return res
         .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
         .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })

@@ -36,6 +36,5 @@ export async function loaderImage({ file }: { file: Express.Multer.File }) {
 
 export async function deleteImage(public_url: string) {
   const response = cloudinary.uploader.destroy(public_url)
-  console.log("response delete img", response)
   return response
 }
