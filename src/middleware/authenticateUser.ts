@@ -6,19 +6,19 @@ export const authenticateUser = (req: Request, res: Response, next: NextFunction
   const token = req.cookies?.access_token ?? req.cookies?.reactive
 
   if (!token) {
-    req.user = { id: null }
+    (req as any).user = { id: null }
     return next()
   }
 
   try {
     const userInfo = getInfoToToken(token)
     if (!userInfo || !(userInfo as DecodedToken).id) {
-      req.user = { id: null }
+      (req as any).user = { id: null }
     } else {
-      req.user = { id: (userInfo as DecodedToken).id }
+      (req as any).user = { id: (userInfo as DecodedToken).id }
     }
   } catch (error) {
-    req.user = { id: null }
+    (req as any).user = { id: null }
   }
 
   next()

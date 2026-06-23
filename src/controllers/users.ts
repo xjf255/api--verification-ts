@@ -4,7 +4,7 @@ import { generarToken, getInfoToToken } from "../utils/generateToken.js"
 import { hashCode, hashPassword } from "../utils/hashPassword.js"
 import { deleteImage, loaderImage } from "../services/cloudMethods.js"
 import { sendMail } from "../services/sendMail.js"
-import { CleanUser, IUserClass, IUserModel } from "../types.js"
+import { CleanUser, IUserClass, IUserModel, CreatedUser } from "../types.js"
 import ejs from "ejs"
 import path from "path"
 import getDirname from "../utils/dirname.js"
@@ -20,8 +20,8 @@ export class UsersController {
 
   getUserByEmail = async (req: Request, res: Response): Promise<any> => {
     const { email } = req.params
-    if (!email) {
-      return res.status(400).json({ message: "Email no proporcionado" })
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ message: "Email no proporcionado o inválido" })
     }
     const user = await this.userModel.getByEmail(email)
     if (!user) {
@@ -44,7 +44,7 @@ export class UsersController {
         return res.status(400).json({ message: JSON.parse(user.error.message) })
       }
 
-      const userData = await this.userModel.createUser(user.data)
+      const userData = await this.userModel.createUser(user.data as CreatedUser)
       const accessToken = generarToken(userData)
       const refreshToken = generarToken(userData, "7d")
 
@@ -87,9 +87,9 @@ export class UsersController {
 
   updatedUser = async (req: Request, res: Response): Promise<any> => {
     try {
-      const id = req?.user?.id || req?.params?.id
+      const id = (req as any).user?.id || req.params.id
 
-      if (!isValidUUID(id)) {
+      if (!id || !isValidUUID(id)) {
         return res.status(400).json({ message: "ID inválido" })
       }
 
@@ -151,8 +151,8 @@ export class UsersController {
   }
 
   deleteUser = async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params ?? req?.user
-    if (!isValidUUID(id)) {
+    const id = req.params.id || (req as any).user?.id
+    if (!id || !isValidUUID(id)) {
       return res.status(400).json({ message: "ID inválido" })
     }
     const response = await this.userModel.updateUser({ isActive: false }, id)
@@ -274,6 +274,9 @@ export class UsersController {
     try {
       // obtengo el token de la URL
       const { token } = req.params
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ message: "Token no proporcionado" })
+      }
       // busco el usuario por el token
       const infoUser = await this.userModel.searchUserByToken(token)
       if (!infoUser) {

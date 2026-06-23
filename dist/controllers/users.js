@@ -13,8 +13,8 @@ export class UsersController {
     constructor(UserModel) {
         this.getUserByEmail = async (req, res) => {
             const { email } = req.params;
-            if (!email) {
-                return res.status(400).json({ message: "Email no proporcionado" });
+            if (!email || typeof email !== "string") {
+                return res.status(400).json({ message: "Email no proporcionado o inválido" });
             }
             const user = await this.userModel.getByEmail(email);
             if (!user) {
@@ -71,15 +71,14 @@ export class UsersController {
                     }
                 }
                 else {
-                    console.log(error);
                     return res.status(500).json({ message: "Error interno del servidor" });
                 }
             }
         };
         this.updatedUser = async (req, res) => {
             try {
-                const id = req?.user?.id || req?.params?.id;
-                if (!isValidUUID(id)) {
+                const id = req.user?.id || req.params.id;
+                if (!id || !isValidUUID(id)) {
                     return res.status(400).json({ message: "ID inválido" });
                 }
                 if (req.file) {
@@ -133,8 +132,8 @@ export class UsersController {
             }
         };
         this.deleteUser = async (req, res) => {
-            const { id } = req.params ?? req?.user;
-            if (!isValidUUID(id)) {
+            const id = req.params.id || req.user?.id;
+            if (!id || !isValidUUID(id)) {
                 return res.status(400).json({ message: "ID inválido" });
             }
             const response = await this.userModel.updateUser({ isActive: false }, id);
@@ -224,10 +223,7 @@ export class UsersController {
                         return res.status(500).json({ message: "Error al procesar la plantilla del correo." });
                     }
                     try {
-                        // Enviar el correo
                         const messageId = await sendMail({ addressee, data: html });
-                        console.log("Correo enviado con ID:", messageId);
-                        // Actualiza la informacion del usuario
                         const isUpdated = await this.userModel.verificationAttempts(data);
                         if (!isUpdated) {
                             return res.status(500).json({ message: "Error al actualizar los datos del usuario" });
@@ -241,7 +237,6 @@ export class UsersController {
                 });
             }
             catch (error) {
-                console.error("Error en resetLogin:", error);
                 return res.status(500).json({ message: "Error interno del servidor" });
             }
         };
@@ -251,6 +246,9 @@ export class UsersController {
             try {
                 // obtengo el token de la URL
                 const { token } = req.params;
+                if (!token || typeof token !== "string") {
+                    return res.status(400).json({ message: "Token no proporcionado" });
+                }
                 // busco el usuario por el token
                 const infoUser = await this.userModel.searchUserByToken(token);
                 if (!infoUser) {

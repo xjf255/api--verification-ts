@@ -4,4 +4,4 @@
 .vscode
 .sql
 *.http
-**/supabase
+**/.supabase

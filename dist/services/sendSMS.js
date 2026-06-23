@@ -9,7 +9,6 @@ const vonage = new Vonage(auth);
 async function send({ to, from, text }) {
     try {
         const response = await vonage.sms.send({ to, from, text });
-        console.log(response);
     }
     catch (error) {
         console.error("Error enviando el mensaje ", error);

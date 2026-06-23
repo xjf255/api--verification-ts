@@ -29,6 +29,5 @@ export async function loaderImage({ file }) {
 }
 export async function deleteImage(public_url) {
     const response = cloudinary.uploader.destroy(public_url);
-    console.log("response delete img", response);
     return response;
 }

@@ -30,8 +30,8 @@ export class FriendShipsController {
   requestAccept = async (req: Request, res: Response): Promise<any> => {
     try {
       const { friendshipId } = req.params
-      if (!friendshipId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!friendshipId || typeof friendshipId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const response = await this.friendShipModel.friendRequestAccept(friendshipId)
       if (!response) {
@@ -47,8 +47,8 @@ export class FriendShipsController {
   requestReject = async (req: Request, res: Response): Promise<any> => {
     try {
       const { friendshipId } = req.params
-      if (!friendshipId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!friendshipId || typeof friendshipId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const response = await this.friendShipModel.friendRequestReject(friendshipId)
       if (!response) {
@@ -64,8 +64,8 @@ export class FriendShipsController {
   cancelRequest = async (req: Request, res: Response): Promise<any> => {
     try {
       const { friendshipId } = req.params
-      if (!friendshipId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!friendshipId || typeof friendshipId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const response = await this.friendShipModel.cancelFriendRequest(friendshipId)
       if (!response) {
@@ -81,8 +81,8 @@ export class FriendShipsController {
   getFriendsList = async (req: Request, res: Response): Promise<any> => {
     try {
       const { userId } = req.params
-      if (!userId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!userId || typeof userId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const friends = await this.friendShipModel.getFriendsList(userId)
       if (friends.length === 0) {
@@ -98,8 +98,8 @@ export class FriendShipsController {
   getFriendRequestsList = async (req: Request, res: Response): Promise<any> => {
     try {
       const { userId } = req.params
-      if (!userId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!userId || typeof userId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const requests = await this.friendShipModel.getFriendRequestsList(userId)
       if (requests.length === 0) {
@@ -115,8 +115,8 @@ export class FriendShipsController {
   removeFriend = async (req: Request, res: Response): Promise<any> => {
     try {
       const { friendshipId } = req.params
-      if (!friendshipId) {
-        return res.status(400).json({ message: "Faltan datos" })
+      if (!friendshipId || typeof friendshipId !== "string") {
+        return res.status(400).json({ message: "Faltan datos o ID inválido" })
       }
       const response = await this.friendShipModel.removeFriend(friendshipId)
       if (!response) {

@@ -1,5 +1,7 @@
 import { InsertSessions, InsertUser, InsertVerification, SelectSessions, SelectUser, SelectVerification } from "./schemas/db.ts"
 
+export type CreatedUser = InsertUser
+
 export interface User {
   id: string,
   user: string,
