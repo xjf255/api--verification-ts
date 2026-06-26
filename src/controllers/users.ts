@@ -11,6 +11,7 @@ import getDirname from "../utils/dirname.js"
 import { sendSMS } from "../services/sendSMS.js"
 import { isValidUUID } from "../utils/validatedUUID.js"
 import { hrInMs } from "../utils/constant.js"
+import { CLOUD_NAME } from "../config.js"
 export class UsersController {
   private userModel
 
@@ -37,7 +38,7 @@ export class UsersController {
       if (file) {
         req.body.avatar = await loaderImage({ file })
       } else {
-        req.body.avatar = 'https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp'
+        req.body.avatar = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/v1736294033/avatardefault_w9hsxz.webp`
       }
       const user = validatedUsers(req.body)
       if (user.error) {
@@ -134,7 +135,7 @@ export class UsersController {
 
       const { avatar } = userData
       const isDefaultAvatar =
-        avatar === "https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp"
+        avatar === `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/v1736294033/avatardefault_w9hsxz.webp`
 
       if (avatar && !isDefaultAvatar) {
         const deleteResponse = await deleteImage(avatar)

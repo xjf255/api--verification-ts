@@ -1,12 +1,12 @@
 import { boolean, pgTable, text, timestamp, uuid, integer, pgEnum, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
-
+import { CLOUD_NAME } from '../config.js'
 export const friendShipStatus = pgEnum('friendship_status', ["pending", "accepted", "blocked"]);
 
 export const usersTable = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   user: text('user').notNull().unique(),
   avatar: text('avatar')
-    .default('https://res.cloudinary.com/dkshw9hik/image/upload/v1736294033/avatardefault_w9hsxz.webp')
+    .default(`https://res.cloudinary.com/${CLOUD_NAME}/image/upload/v1736294033/avatardefault_w9hsxz.webp`)
     .notNull(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
