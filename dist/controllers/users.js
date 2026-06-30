@@ -12,19 +12,21 @@ import { hrInMs } from "../utils/constant.js";
 import { CLOUD_NAME } from "../config.js";
 export class UsersController {
     constructor(UserModel) {
-        this.getUserByEmail = async (req, res) => {
+        this.getUserByEmail = async (req, res, next) => {
             const { email } = req.params;
-            if (!email || typeof email !== "string") {
-                return res.status(400).json({ message: "Email no proporcionado o inválido" });
+            try {
+                const user = await this.userModel.getByEmail(email);
+                if (!user) {
+                    return res.status(404).json({ message: 'Usuario no encontrado' });
+                }
+                const { id, ...userData } = user;
+                return res.json(userData);
             }
-            const user = await this.userModel.getByEmail(email);
-            if (!user) {
-                return res.status(404).json({ message: "Usuario no encontrado" });
+            catch (error) {
+                next(error);
             }
-            const { id, ...userData } = user;
-            return res.json(userData);
         };
-        this.createUser = async (req, res) => {
+        this.createUser = async (req, res, next) => {
             try {
                 const file = req.file;
                 if (file) {
@@ -53,11 +55,13 @@ export class UsersController {
                     .cookie("access_token", accessToken, {
                     httpOnly: true,
                     sameSite: "strict",
+                    secure: true,
                     expires: new Date(Date.now() + hrInMs)
                 })
                     .cookie("refresh_token", refreshToken, {
                     httpOnly: true,
                     sameSite: "strict",
+                    secure: true,
                     expires: new Date(Date.now() + hrInMs * 24 * 7)
                 })
                     .json(userData);
@@ -72,15 +76,15 @@ export class UsersController {
                     }
                 }
                 else {
-                    return res.status(500).json({ message: "Error interno del servidor" });
+                    next(error);
                 }
             }
         };
-        this.updatedUser = async (req, res) => {
+        this.updatedUser = async (req, res, next) => {
             try {
                 const id = req.user?.id || req.params.id;
                 if (!id || !isValidUUID(id)) {
-                    return res.status(400).json({ message: "ID inválido" });
+                    return res.status(400).json({ message: 'ID inválido' });
                 }
                 if (req.file) {
                     await this.handleAvatarUpdate(req, id);
@@ -105,8 +109,7 @@ export class UsersController {
                     return res.status(409).json({ message: "El usuario o correo no válido" });
                 }
                 else {
-                    console.error("Error al actualizar usuario:", error);
-                    return res.status(500).json({ message: "Error interno del servidor" });
+                    next(error);
                 }
             }
         };
@@ -132,20 +135,26 @@ export class UsersController {
                 throw new Error("Error al manejar la imagen de perfil");
             }
         };
-        this.deleteUser = async (req, res) => {
+        this.deleteUser = async (req, res, next) => {
             const id = req.params.id || req.user?.id;
             if (!id || !isValidUUID(id)) {
-                return res.status(400).json({ message: "ID inválido" });
+                return res.status(400).json({ message: 'ID inválido' });
             }
-            const response = await this.userModel.updateUser({ isActive: false }, id);
-            if (!response) {
-                return res
-                    .clearCookie("access_token")
-                    .status(404)
-                    .json({ message: "Usuario no encontrado" });
+            try {
+                const response = await this.userModel.updateUser({ isActive: false }, id);
+                if (!response) {
+                    return res
+                        .clearCookie('access_token')
+                        .status(404)
+                        .json({ message: 'Usuario no encontrado' });
+                }
+                return res.json({ message: 'Usuario desactivado correctamente' });
+            }
+            catch (error) {
+                next(error);
             }
         };
-        this.reactiveUser = async (req, res) => {
+        this.reactiveUser = async (req, res, next) => {
             try {
                 const token = req.cookies?.reactive;
                 if (!token) {
@@ -188,11 +197,10 @@ export class UsersController {
                     .json({ message: "Usuario reactivado" });
             }
             catch (error) {
-                console.error("Error reactivando usuario:", error);
-                return res.status(500).json({ message: "Error interno del servidor" });
+                next(error);
             }
         };
-        this.resetLogin = async (req, res) => {
+        this.resetLogin = async (req, res, next) => {
             try {
                 //en el req.body puede venir el email o el user
                 const { user, email } = req.body;
@@ -238,18 +246,14 @@ export class UsersController {
                 });
             }
             catch (error) {
-                return res.status(500).json({ message: "Error interno del servidor" });
+                next(error);
             }
         };
         //si el usuario ingreso a la URL,
         //'/two_factor?token=fslkfjasl' 
-        this.authentication = async (req, res) => {
+        this.authentication = async (req, res, next) => {
             try {
-                // obtengo el token de la URL
                 const { token } = req.params;
-                if (!token || typeof token !== "string") {
-                    return res.status(400).json({ message: "Token no proporcionado" });
-                }
                 // busco el usuario por el token
                 const infoUser = await this.userModel.searchUserByToken(token);
                 if (!infoUser) {
@@ -276,12 +280,11 @@ export class UsersController {
                 return res.status(401).json({ message: 'no se pudo en enviar el codigo' });
             }
             catch (error) {
-                console.error(error);
-                return res.status(500).json({ message: error });
+                next(error);
             }
         };
         //el usuario envia codigo
-        this.validationToken = async (req, res) => {
+        this.validationToken = async (req, res, next) => {
             const { cod } = req.body;
             const verificationToken = req.cookies?.verification;
             try {
@@ -314,8 +317,7 @@ export class UsersController {
                     .json({ message: "Código válido" });
             }
             catch (error) {
-                console.error("Error al verificar el código:", error);
-                return res.status(500).json({ message: "Error interno del servidor" });
+                next(error);
             }
         };
         this.userModel = UserModel;

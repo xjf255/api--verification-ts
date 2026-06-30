@@ -68,7 +68,7 @@ Content-Type:  application/json
 }
 
 ### reset login
-GET  http://localhost:1234/users/juanfher.255@gmail.co
+GET  http://localhost:1234/users/juanfher.255@gmail.com
 Content-Type:  application/json
 
 ### get friends list

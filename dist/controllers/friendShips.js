@@ -1,122 +1,97 @@
 export class FriendShipsController {
     constructor({ UserModel, FriendShipModel }) {
-        this.requestSend = async (req, res) => {
+        this.requestSend = async (req, res, next) => {
             try {
                 const { requesterId, addressee } = req.body;
                 if (!requesterId || !addressee) {
-                    return res.status(400).json({ message: "Faltan datos" });
+                    return res.status(400).json({ message: 'Faltan datos' });
                 }
                 const response = await this.userModel.friendRequestSend(addressee, requesterId);
                 if (!response) {
-                    return res.status(404).json({ message: "No se pudo enviar la solicitud de amistad" });
+                    return res.status(400).json({ message: 'No se pudo enviar la solicitud de amistad' });
                 }
-                return res.status(200).json({ message: "Solicitud de amistad enviada" });
+                return res.status(200).json({ message: 'Solicitud de amistad enviada' });
             }
             catch (error) {
-                console.error("Error en requestSend:", error);
-                return res.status(500).json({ message: "Error del servidor" });
+                next(error);
             }
         };
-        this.requestAccept = async (req, res) => {
+        this.requestAccept = async (req, res, next) => {
             try {
                 const { friendshipId } = req.params;
-                if (!friendshipId || typeof friendshipId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const response = await this.friendShipModel.friendRequestAccept(friendshipId);
                 if (!response) {
-                    return res.status(404).json({ message: "No se pudo aceptar la solicitud de amistad" });
+                    return res.status(404).json({ message: 'No se pudo aceptar la solicitud de amistad' });
                 }
-                return res.status(200).json({ message: "Solicitud de amistad aceptada" });
+                return res.status(200).json({ message: 'Solicitud de amistad aceptada' });
             }
             catch (error) {
-                console.error("Error en requestAccept:", error);
-                return res.status(500).json({ message: "Error del servidor" });
+                next(error);
             }
         };
-        this.requestReject = async (req, res) => {
+        this.requestReject = async (req, res, next) => {
             try {
                 const { friendshipId } = req.params;
-                if (!friendshipId || typeof friendshipId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const response = await this.friendShipModel.friendRequestReject(friendshipId);
                 if (!response) {
-                    return res.status(404).json({ message: "No se pudo rechazar la solicitud de amistad" });
+                    return res.status(404).json({ message: 'No se pudo rechazar la solicitud de amistad' });
                 }
-                return res.status(200).json({ message: "Solicitud de amistad rechazada" });
+                return res.status(200).json({ message: 'Solicitud de amistad rechazada' });
             }
             catch (error) {
-                console.error("Error en requestReject:", error);
-                return res.status(500).json({ message: "Error del servidor" });
+                next(error);
             }
         };
-        this.cancelRequest = async (req, res) => {
+        this.cancelRequest = async (req, res, next) => {
             try {
                 const { friendshipId } = req.params;
-                if (!friendshipId || typeof friendshipId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const response = await this.friendShipModel.cancelFriendRequest(friendshipId);
                 if (!response) {
-                    return res.status(404).json({ message: "No se pudo cancelar la solicitud de amistad" });
+                    return res.status(404).json({ message: 'No se pudo cancelar la solicitud de amistad' });
                 }
-                return res.status(200).json({ message: "Solicitud de amistad cancelada" });
+                return res.status(200).json({ message: 'Solicitud de amistad cancelada' });
             }
             catch (error) {
-                console.error("Error en cancelRequest:", error);
-                return res.status(500).json({ message: "Error del servidor" });
+                next(error);
             }
         };
-        this.getFriendsList = async (req, res) => {
+        this.getFriendsList = async (req, res, next) => {
             try {
                 const { userId } = req.params;
-                if (!userId || typeof userId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const friends = await this.friendShipModel.getFriendsList(userId);
                 if (friends.length === 0) {
-                    return res.status(200).json({ message: "No se encontraron amigos" });
+                    return res.status(200).json({ message: 'No se encontraron amigos' });
                 }
                 return res.status(200).json({ friends });
             }
             catch (error) {
-                console.error("Error en getFriendsList:", error);
-                return res.status(404).json({ message: "No se pudo obtener la lista de amigos" });
+                next(error);
             }
         };
-        this.getFriendRequestsList = async (req, res) => {
+        this.getFriendRequestsList = async (req, res, next) => {
             try {
                 const { userId } = req.params;
-                if (!userId || typeof userId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const requests = await this.friendShipModel.getFriendRequestsList(userId);
                 if (requests.length === 0) {
-                    return res.status(200).json({ message: "No se encontraron de solicitudes de amistad" });
+                    return res.status(200).json({ message: 'No se encontraron solicitudes de amistad' });
                 }
                 return res.status(200).json({ requests });
             }
             catch (error) {
-                console.error("Error en getFriendRequestsList:", error);
-                return res.status(404).json({ message: "No se pudo obtener la lista de solicitudes de amistad" });
+                next(error);
             }
         };
-        this.removeFriend = async (req, res) => {
+        this.removeFriend = async (req, res, next) => {
             try {
                 const { friendshipId } = req.params;
-                if (!friendshipId || typeof friendshipId !== "string") {
-                    return res.status(400).json({ message: "Faltan datos o ID inválido" });
-                }
                 const response = await this.friendShipModel.removeFriend(friendshipId);
                 if (!response) {
-                    return res.status(404).json({ message: "No se pudo eliminar la amistad" });
+                    return res.status(404).json({ message: 'No se pudo eliminar la amistad' });
                 }
-                return res.status(200).json({ message: "Amistad eliminada" });
+                return res.status(200).json({ message: 'Amistad eliminada' });
             }
             catch (error) {
-                console.error("Error en removeFriend:", error);
-                return res.status(500).json({ message: "Error del servidor" });
+                next(error);
             }
         };
         this.userModel = UserModel;

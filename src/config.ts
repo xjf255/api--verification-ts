@@ -4,7 +4,6 @@ dotenv.config()
 const {
   DATABASE_URL: supabaseUrl = '',
   DB_API_KEY: supabaseKey = '',
-  SALT_ROUND = 10,
   SECRET_KEY,
   CLOUDINARY_API_NAME: CLOUD_NAME,
   CLOUDINARY_API_KEY: CLOUD_KEY,
@@ -15,4 +14,6 @@ const {
   SMS_SECRET
 } = process.env
 
-export { supabaseUrl, supabaseKey, SALT_ROUND, SECRET_KEY, CLOUD_NAME, CLOUD_KEY, CLOUD_SECRET, MAIL, MAIL_PASSWORD, SMS, SMS_SECRET } 
+const SALT_ROUND = Number(process.env.SALT_ROUND) || 10
+
+export { supabaseUrl, supabaseKey, SALT_ROUND, SECRET_KEY, CLOUD_NAME, CLOUD_KEY, CLOUD_SECRET, MAIL, MAIL_PASSWORD, SMS, SMS_SECRET }

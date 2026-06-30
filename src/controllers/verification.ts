@@ -1,17 +1,17 @@
-import { Request, Response } from "express"
-import { validatedPartialUsers } from "../schemas/user.js"
-import { generarToken, getInfoToToken } from "../utils/generateToken.js"
-import { CleanUser, IUserClass, IUserModel } from "../types.js"
-import { hrInMs } from "../utils/constant.js"
+import { NextFunction, Request, Response } from 'express'
+import { validatedPartialUsers } from '../schemas/user.js'
+import { generarToken, getInfoToToken } from '../utils/generateToken.js'
+import { CleanUser, IUserModel } from '../types.js'
+import { hrInMs } from '../utils/constant.js'
 
 export class VerificationController {
   private userModel
 
-  constructor(UserModel: IUserModel) {
+  constructor (UserModel: IUserModel) {
     this.userModel = UserModel
   }
 
-  login = async (req: Request, res: Response): Promise<any> => {
+  login = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
       const dataUser = validatedPartialUsers({ ...req.body })
       if (dataUser.error) {
@@ -19,27 +19,28 @@ export class VerificationController {
       }
       const { password, user, email } = dataUser.data
       if (!password || !(user || email)) {
-        return res.status(400).json({ message: "Faltan datos" })
+        return res.status(400).json({ message: 'Faltan datos' })
       }
       const userData = await this.userModel.login({ user, email, password }) as CleanUser
       if (!userData) {
-        return res.status(404).json({ message: "Credenciales inválidas" })
+        return res.status(401).json({ message: 'Credenciales inválidas' })
       }
 
       if (!userData.isActive) {
-        const reactiveToken = generarToken({ id: userData.id }, "1h")
-        return res.status(401).cookie("reactive", reactiveToken, {
+        const reactiveToken = generarToken({ id: userData.id }, '1h')
+        return res.status(401).cookie('reactive', reactiveToken, {
           httpOnly: true,
-          sameSite: "strict",
+          sameSite: 'strict',
+          secure: true,
           expires: new Date(Date.now() + hrInMs)
-        }).json({ message: "Usuario inactivo" })
+        }).json({ message: 'Usuario inactivo' })
       }
 
       const token = generarToken(userData)
-      const refreshToken = generarToken(userData, "7d")
+      const refreshToken = generarToken(userData, '7d')
 
       if (!token || !refreshToken) {
-        return res.status(403).json({ message: "Error al generar token" })
+        return res.status(403).json({ message: 'Error al generar token' })
       }
 
       await this.userModel.createSession({
@@ -50,29 +51,29 @@ export class VerificationController {
       })
 
       res
-        .cookie("access_token", token, {
+        .cookie('access_token', token, {
           httpOnly: true,
-          sameSite: "strict",
-          expires: new Date(Date.now() + hrInMs),
+          sameSite: 'strict',
+          secure: true,
+          expires: new Date(Date.now() + hrInMs)
         })
-        .cookie("refresh_token", refreshToken, {
+        .cookie('refresh_token', refreshToken, {
           httpOnly: true,
-          sameSite: "strict",
-          expires: new Date(Date.now() + hrInMs * 24 * 7),
+          sameSite: 'strict',
+          secure: true,
+          expires: new Date(Date.now() + hrInMs * 24 * 7)
         })
         .json({
-          message: "Inicio de sesión exitoso",
+          message: 'Inicio de sesión exitoso',
           user: userData,
-          token,
+          token
         })
-
     } catch (error) {
-      console.error("Error en el endpoint /login:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
+      next(error)
     }
   }
 
-  loginByGuest = async (req: Request, res: Response): Promise<any> => {
+  loginByGuest = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
       const dataUser = validatedPartialUsers({ ...req.body })
       if (dataUser.error) {
@@ -80,27 +81,28 @@ export class VerificationController {
       }
       const { password, user, email } = dataUser.data
       if (!password || !(user || email)) {
-        return res.status(400).json({ message: "Faltan datos" })
+        return res.status(400).json({ message: 'Faltan datos' })
       }
       const userData = await this.userModel.login({ user, email, password }) as CleanUser
       if (!userData) {
-        return res.status(404).json({ message: "Credenciales inválidas" })
+        return res.status(401).json({ message: 'Credenciales inválidas' })
       }
 
       if (!userData.isActive) {
-        const reactiveToken = generarToken({ id: userData.id }, "1h")
-        return res.status(401).cookie("reactive", reactiveToken, {
+        const reactiveToken = generarToken({ id: userData.id }, '1h')
+        return res.status(401).cookie('reactive', reactiveToken, {
           httpOnly: true,
-          sameSite: "strict",
+          sameSite: 'strict',
+          secure: true,
           expires: new Date(Date.now() + hrInMs)
-        }).json({ message: "Usuario inactivo" })
+        }).json({ message: 'Usuario inactivo' })
       }
 
       const token = generarToken(userData)
-      const refreshToken = generarToken(userData, "7d")
+      const refreshToken = generarToken(userData, '7d')
 
       if (!token || !refreshToken) {
-        return res.status(403).json({ message: "Error al generar token" })
+        return res.status(403).json({ message: 'Error al generar token' })
       }
 
       await this.userModel.createSession({
@@ -111,101 +113,92 @@ export class VerificationController {
       })
 
       res
-        .cookie("access_token", token, {
+        .cookie('access_token', token, {
           httpOnly: true,
-          sameSite: "strict",
-          expires: new Date(Date.now() + hrInMs),
+          sameSite: 'strict',
+          secure: true,
+          expires: new Date(Date.now() + hrInMs)
         })
-        .cookie("refresh_token", refreshToken, {
+        .cookie('refresh_token', refreshToken, {
           httpOnly: true,
-          sameSite: "strict",
-          expires: new Date(Date.now() + hrInMs * 24 * 7),
+          sameSite: 'strict',
+          secure: true,
+          expires: new Date(Date.now() + hrInMs * 24 * 7)
         })
         .json({
-          message: "Inicio de sesión exitoso",
+          message: 'Inicio de sesión exitoso',
           user: userData,
-          token,
+          token
         })
-
     } catch (error) {
-      console.error("Error en el endpoint /login:", error)
-      res.status(500).json({ message: "Error interno del servidor" })
+      next(error)
     }
   }
 
-  protected = async (req: Request, res: Response): Promise<any> => {
-    const token = req.cookies?.access_token ?? ""
-    const refreshToken = req.cookies?.refresh_token ?? ""
+  protected = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+    const token = req.cookies?.access_token ?? ''
+    const refreshToken = req.cookies?.refresh_token ?? ''
 
     if (!refreshToken) {
-      return res.status(403).json({ error: "Access denied. No token provided." })
+      return res.status(403).json({ error: 'Access denied. No token provided.' })
     }
 
-    let refreshTokenInfo, accessTokenInfo
-
     try {
-      refreshTokenInfo = getInfoToToken(refreshToken)
-      accessTokenInfo = getInfoToToken(token)
+      const refreshTokenInfo = getInfoToToken(refreshToken)
+      const accessTokenInfo = getInfoToToken(token)
 
-      if (typeof refreshTokenInfo !== "object" && typeof accessTokenInfo !== "object") {
-        throw new Error("Invalid token format")
+      if (!refreshTokenInfo || !accessTokenInfo) {
+        return res.status(403).json({ error: 'Access denied. Invalid token.' })
       }
 
       const { exp: expRefreshToken } = refreshTokenInfo
-      const { exp: expAccessToken, isGuest } = accessTokenInfo
+      const { exp: expAccessToken, isGuest } = accessTokenInfo as any
 
       if ((!expRefreshToken || Date.now() >= expRefreshToken * 1000) && isGuest) {
         return res.status(403)
-          .clearCookie("access_token")
-          .clearCookie("refresh_token")
-          .json({ error: "Session expired. Please log in again." })
+          .clearCookie('access_token')
+          .clearCookie('refresh_token')
+          .json({ error: 'Session expired. Please log in again.' })
       }
 
       if (!expAccessToken || Date.now() >= expAccessToken * 1000) {
-        const infoUser = refreshTokenInfo
-        const newToken = generarToken(infoUser)
+        const newToken = generarToken(refreshTokenInfo as Record<string, any>)
 
-        try {
-          const updateSession = await this.userModel.updateSession({
-            accessToken: newToken,
-            expiresAt: new Date(Date.now() + hrInMs)
-          }, refreshToken)
+        const updateSession = await this.userModel.updateSession({
+          accessToken: newToken,
+          expiresAt: new Date(Date.now() + hrInMs)
+        }, refreshToken)
 
-          if (!updateSession) {
-            throw new Error("Failed to update session")
-          }
-          return res.cookie("access_token", newToken, {
-            httpOnly: true,
-            sameSite: "strict",
-            expires: new Date(Date.now() + hrInMs)
-          }).json(updateSession)
-        } catch (error) {
-          console.error(error)
-          return res.status(500).json({ error: "Server error. Try again later." })
+        if (!updateSession) {
+          return res.status(500).json({ error: 'Server error. Try again later.' })
         }
+
+        return res.cookie('access_token', newToken, {
+          httpOnly: true,
+          sameSite: 'strict',
+          secure: true,
+          expires: new Date(Date.now() + hrInMs)
+        }).json(updateSession)
       }
-      const user = await this.userModel.getById(accessTokenInfo.id)
 
+      const user = await this.userModel.getById((accessTokenInfo as any).id)
       return res.json(user)
-
     } catch (error) {
-      console.error("Token error:", error)
-      return res.status(403).json({ error: "Access denied. Invalid token." })
+      next(error)
     }
   }
 
-  logout = async (req: Request, res: Response): Promise<any> => {
+  logout = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-      const accessToken = req.cookies?.access_token ?? ""
-      const refreshToken = req.cookies?.refresh_token ?? ""
-      const isRemove = await this.userModel.removeSession(accessToken, refreshToken)
+      const accessToken = req.cookies?.access_token ?? ''
+      const refreshToken = req.cookies?.refresh_token ?? ''
+      await this.userModel.removeSession(accessToken, refreshToken)
       return res
-        .clearCookie("access_token", { httpOnly: true, sameSite: "strict" })
-        .clearCookie("refresh_token", { httpOnly: true, sameSite: "strict" })
-        .json({ message: "Logout exitoso" })
+        .clearCookie('access_token', { httpOnly: true, sameSite: 'strict', secure: true })
+        .clearCookie('refresh_token', { httpOnly: true, sameSite: 'strict', secure: true })
+        .json({ message: 'Logout exitoso' })
     } catch (error) {
-      console.error("Error to remove session:", error)
-      return res.status(403).json({ error: "Can´t remove session" })
+      next(error)
     }
   }
 }
